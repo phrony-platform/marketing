@@ -1,0 +1,290 @@
+---
+title: "Tool bindings"
+description: "How an Agent references Tools and Policies—bindings, logical refs, and schema overrides."
+---
+
+## Overview
+
+<Note>
+  **A Tool defines a capability; a binding grants one agent permission to use it.** The [Tool](/docs/agent-spec/resources/tool) document is the reusable job description. A *binding* is the line in an agent's manifest that says "this agent may call that tool" — optionally under a friendlier name, with tighter input rules, and extra policies. The same Tool can be bound by many agents, each with its own restrictions.
+</Note>
+
+On an **Agent**, `spec.tools` lists **bindings**: which tool contracts this agent may call, optional schema narrowing, and additional policies. The runtime presents each binding to the model and **dispatches** authorized calls to registered workers—it does not execute tool code inside the daemon.
+
+<Tip>
+  Bindings may only **narrow**, never **widen**. You can make a tool *more* restrictive for one agent (fewer allowed inputs, stricter side-effect handling, extra approval policies) but you can't grant it more than the underlying Tool contract allows. Tightening is safe; loosening is not.
+</Tip>
+
+- **Tool contract** — [Tool](/docs/agent-spec/resources/tool) document (`kind: Tool`) or catalog entry
+- **Policy rules** — [Policy](/docs/agent-spec/resources/policy) documents or compiled governance boundaries
+- **Worker transport** — [Application workers](/docs/runtime/tool-workers) dial the runtime and register `tool@version` handlers (not a manifest kind)
+- **MCP transport** — [MCP servers](/docs/agent-spec/resources/mcp-servers) declare remote HTTPS endpoints; bindings with `mcp` route to the runtime's native MCP client (not a manifest kind)
+
+Related runtime behavior: [Tool dispatch](/docs/runtime/tool-dispatch), [MCP tool dispatch](/docs/runtime/mcp-tools), [Application workers](/docs/runtime/tool-workers).
+
+### Concept examples
+
+**Tool** (shared contract — any agent may reference it):
+
+```yaml
+# tools/send-alert.yaml
+kind: Tool
+metadata:
+  name: send-alert
+  namespace: weather
+spec:
+  input_schema:
+    ref: schemas/alert-input
+```
+
+**Binding** (this agent may use it, under a friendlier name):
+
+```yaml
+# agent.yaml
+spec:
+  tools:
+    - ref: weather.send-alert@^1.0
+      as: send_alert
+      policies:
+        - weather.high-severity-alert-boundary
+```
+
+**Narrowing** (binding caps `severity`; Tool might allow any level):
+
+```yaml
+# Tool allows severity: 1 … 5
+# Binding narrows to severity: 1 … 3 for this agent only
+input_schema:
+  inline:
+    properties:
+      severity: { type: integer, maximum: 3 }
+```
+
+## Binding example
+
+```yaml
+apiVersion: phrony.com/v1
+kind: Agent
+
+metadata:
+  name: weather-assistant
+  namespace: weather
+  version: 2.4.0
+  governance:
+    authority_boundaries:
+      - weather.alert-authority
+
+spec:
+  tools:
+    - ref: weather.send-alert@^1.0
+      as: send_alert
+      description: Send a public weather alert within delegated limits.
+      input_schema:
+        ref: schemas/alert-input
+      policies:
+        - weather.high-severity-alert-boundary
+      side_effect_class: non_idempotent_write
+  default_policies:
+    - weather.audit-log-required
+```
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `ref` | Yes | Logical tool id with optional semver constraint (`namespace.name@^1.3`) |
+| `as` | No | Wire name for the model API when you need a name other than the derived ref |
+| `description` | No | Override or supplement Tool `spec.description` |
+| `input_schema` | No | `ref` or `inline` JSON Schema; may **narrow** the Tool schema |
+| `policies` | No | Logical refs or file refs to Policy documents |
+| `side_effect_class` | No | May **narrow** Tool class, not widen; **required** for [MCP-backed](/docs/agent-spec/resources/mcp-servers) bindings |
+| `mcp` | No | When set, routes to `spec.mcp_servers` instead of workers; see [MCP servers](/docs/agent-spec/resources/mcp-servers) |
+| `version` | No | Do not set; pin semver on `ref` (for example `ns.tool@^1.3`); not used on MCP bindings (`ref` must be `namespace.name` only) |
+
+### Logical refs vs file refs
+
+| Style | Example | Resolved at publish |
+|-------|---------|---------------------|
+| Logical (catalog) | `weather.send-alert@^1.0` | `tools/send-alert.yaml` or governed registry |
+| Policy logical | `weather.high-severity-alert-boundary` | `policies/high-severity-alert-boundary.yaml` |
+| Policy file | `ref: policies/high-severity-alert-boundary` | Bundle-relative path |
+
+Publish **pins** one concrete tool version and inlined schemas in the **resolved snapshot**. Deploy must not widen beyond that pin.
+
+### input_schema
+
+Exactly one of `ref` (+ optional `version`) or `inline` per schema object.
+
+```yaml
+input_schema:
+  inline:
+    type: object
+    properties:
+      severity: { type: integer }
+    required: [severity]
+```
+
+## Agent-wide policies
+
+### default_policies
+
+Policies applied to **every** tool binding unless a more specific rule denies:
+
+```yaml
+spec:
+  default_policies:
+    - weather.audit-log-required
+```
+
+### policies on the binding
+
+Binding-level `policies` add rules for that tool only. Merge order and **deny wins** semantics are described in [Policy](/docs/agent-spec/resources/policy#referencing-policies).
+
+### Policy documents (preferred)
+
+Attach rules with logical refs on bindings (see [Binding example](#binding-example)) or `default_policies`. Each rule is a `kind: Policy` file under `policies/`—see [Policy](/docs/agent-spec/resources/policy) for `conditions`, `decision.type`, and `authority_ref`.
+
+```yaml
+# policies/strict-geo.yaml
+apiVersion: phrony.com/v1
+kind: Policy
+
+metadata:
+  name: strict-geo
+  namespace: weather
+  version: 1.0.0
+
+spec:
+  scope: tool:weather.get-forecast
+  conditions:
+    field: country
+    op: in
+    value: ["US", "CA", "MX"]
+  decision:
+    type: allow
+```
+
+```yaml
+# agent.yaml — reference by logical id
+spec:
+  tools:
+    - ref: weather.get-forecast@^1.0
+      policies:
+        - weather.strict-geo
+```
+
+## Human-in-the-loop
+
+Approval, escalation, and operator review are **`decision` blocks on Policy documents** (`kind: Policy` under `policies/`).
+
+| Portable | Implementation |
+|----------|----------------|
+| `decision.type: require_approval` | Runtime suspends session until approval |
+| `decision.type: escalate` | Operator review (for example indeterminate dispatch) |
+| `authority_ref` | Symbolic taxonomy link (no authz) |
+| `decision.runtime` | IdP roles, queues, SLAs (`phrony.com/approver_role`, …) |
+
+Reference policies from bindings (for example `weather.high-severity-alert-boundary` in the [binding example](#binding-example)) or attach agent-wide via `default_policies`. See [Policy](/docs/agent-spec/resources/policy#minimal-example--require-approval) for the full `require_approval` shape.
+
+At publish, policy documents are compiled into the resolved agent snapshot. Do **not** author rules under `spec.policies` on the Agent YAML.
+
+### Dispatch failures and limits
+
+Model operational review with Policy conditions on the dispatch context:
+
+| Situation | Condition field | Example value |
+|-----------|-----------------|---------------|
+| Unknown outcome | `phrony.dispatch.trigger` or `dispatch.outcome` | `dispatch:indeterminate` or `indeterminate` |
+| No worker | `phrony.dispatch.trigger` | `dispatch:no_handler` |
+| Capacity exhausted | `phrony.dispatch.trigger` | `dispatch:capacity_exhausted` |
+| Lease expired | `phrony.dispatch.trigger` | `dispatch:lease_expired` |
+| Limit breach with `on_limit: escalate` | `phrony.dispatch.trigger` | `limit:escalate` |
+
+Example: indeterminate dispatch review:
+
+```yaml
+# policies/indeterminate-dispatch.yaml
+apiVersion: phrony.com/v1
+kind: Policy
+
+metadata:
+  name: indeterminate-dispatch-review
+  namespace: weather
+  version: 1.0.0
+
+spec:
+  description: Escalate when tool execution outcome is unknown.
+  conditions:
+    field: dispatch.outcome
+    op: eq
+    value: indeterminate
+  decision:
+    type: escalate
+    reason: Tool outcome indeterminate; operator review required.
+    runtime:
+      phrony.com/approver_role: on-call
+```
+
+```yaml
+# agent.yaml
+spec:
+  default_policies:
+    - weather.indeterminate-dispatch-review
+```
+
+For `non_idempotent_write` and `irreversible_action` tools, the runtime still escalates on indeterminate outcomes when no matching Policy applies (side-effect default). Pair `spec.limits.on_limit: escalate` with a Policy that matches `limit:escalate`. Set `max_hitl_wait_minutes` separately from `max_wall_clock_seconds` on [Agent limits](/docs/agent-spec/resources/agent).
+
+## side_effect_class
+
+| Value | Meaning |
+|-------|---------|
+| `read_only` | No durable side effects; safe to redispatch after indeterminate failure |
+| `idempotent_write` | Writes safely retried with the same `call_id` |
+| `non_idempotent_write` | At-most-once unless handler proves idempotency |
+| `irreversible_action` | Cannot be safely repeated; indeterminate → human review |
+
+Omit or use `read_only` for read-only tools. Defaults come from the [Tool](/docs/agent-spec/resources/tool) document when not set on the binding.
+
+## Limits interaction
+
+| Limit | Tool loop effect |
+|-------|------------------|
+| `max_loop_iterations` | Cap on model completions (tool-use steps) |
+| `max_tokens_per_run` | Cumulative tokens across completions |
+| `max_wall_clock_seconds` | Includes tool wait time |
+| `max_hitl_wait_minutes` | Separate budget for approval waits (distinct from wall clock) |
+
+See [Agent definition](/docs/agent-spec/resources/agent) for `spec.limits`.
+
+## MCP-backed bindings
+
+When a binding includes **`mcp`**, the runtime calls a remote MCP server declared under **`spec.mcp_servers`** instead of dispatching to a worker. You must declare `input_schema` and `side_effect_class` on the binding (there is no `tools/` catalog merge). Policy scope, HITL, and limits work the same as worker tools.
+
+```yaml
+spec:
+  mcp_servers:
+    - name: search
+      url: https://mcp.example.com/mcp
+      auth:
+        scheme: bearer
+        secret: mcp_token
+
+  tools:
+    - ref: search.web
+      as: web_search
+      side_effect_class: read_only
+      input_schema:
+        ref: schemas/web-search-input
+      mcp:
+        server: search
+        tool: web_search
+```
+
+Full field reference, auth, and validation: [MCP servers](/docs/agent-spec/resources/mcp-servers). Runtime routing: [MCP tool dispatch](/docs/runtime/mcp-tools).
+
+<UpNext>
+  <Card title="Tool" href="/docs/agent-spec/resources/tool">
+    The portable kind: Tool contract, schemas, and default_policies.
+  </Card>
+  <Card title="Policy" href="/docs/agent-spec/resources/policy">
+    Conditions, require_approval, escalate, and decision.runtime.
+  </Card>
+</UpNext>

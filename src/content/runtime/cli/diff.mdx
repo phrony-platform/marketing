@@ -1,0 +1,46 @@
+---
+title: "diff"
+description: "Diff a local manifest against a published version."
+---
+
+## Synopsis
+
+```bash
+phrony diff MANIFEST AGENT@VERSION
+```
+
+## Description
+
+Resolves `MANIFEST` locally and fetches the published resolved snapshot for `AGENT@VERSION` from the runtime. Both sides are normalized to canonical, pretty-printed JSON and compared, then printed as a unified diff: removed lines (`-`) are what's published today and added lines (`+`) are what your local manifest would change. Each change is shown with surrounding context and a hunk header, followed by a summary of additions and deletions. When the manifests match, it reports no differences.
+
+Output is colorized when writing to a terminal (red for removals, green for additions). Color is disabled automatically when the output is piped or redirected, or when the `NO_COLOR` environment variable is set.
+
+Use this before [`publish`](/docs/runtime/cli/publish) to confirm what changed relative to a version already in the registry.
+
+## Example
+
+```bash
+phrony diff ./weather-assistant/agent.yaml weather/weather-assistant@2.3.0
+```
+
+```text
+--- weather/weather-assistant@2.3.0 (published)
++++ ./weather-assistant/agent.yaml (local)
+@@ -8,7 +8,7 @@
+     "model": {
+-      "temperature": 0.2,
++      "temperature": 0.5,
+       "name": "gpt-4o"
+     },
+
+Summary: 1 addition, 1 deletion
+```
+
+<UpNext>
+  <Card title="inspect" href="/docs/runtime/cli/inspect">
+    Metadata for a published version.
+  </Card>
+  <Card title="publish" href="/docs/runtime/cli/publish">
+    Push local changes as a new version.
+  </Card>
+</UpNext>

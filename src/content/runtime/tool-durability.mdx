@@ -1,0 +1,142 @@
+---
+title: "Durability and recovery"
+description: "How tool invocations are persisted, how sessions park while waiting, and what happens after a runtime restart."
+---
+
+## Why durability matters
+
+<Note>
+  **The worry:** an agent could be halfway through real work — an alert submitted, a worker still running — when the runtime crashes or is restarted for a deploy. **Durable** means "survives a restart." The runtime is built so that, after a crash, it can look at the database and answer "what was in flight, and what's safe to resume?" instead of losing the session or blindly redoing risky actions.
+</Note>
+
+Tool calls introduce **external in-flight state**: a worker may be executing while the runtime process restarts. The reference runtime persists every invocation **before** enqueue and **before** acknowledging the worker, so crash windows are recoverable.
+
+### Concept examples
+
+**Persist-before-act** (order of operations):
+
+```text
+1. INSERT tool_invocations (status=queued, call_id=c1)
+2. SEND invoke to worker
+3. RECEIVE result → UPDATE status=succeeded
+4. SEND result_ack to worker
+```
+
+**Parked session** (waiting, not using the model):
+
+```text
+status: awaiting_approval   # human has not clicked approve yet
+tokens: 0 in flight         # no open model request
+```
+
+**Recovery after crash** (ledger is source of truth):
+
+```text
+Before crash: 3 rows status=queued for call_ids c1,c2,c3
+After restart: runtime re-enqueues c1,c2,c3 from Postgres (no model replay)
+```
+
+**Side-effect on recovery**:
+
+```text
+read_only tool, outcome unknown → redispatch same call_id=c1
+non_idempotent_write, outcome unknown → status=indeterminate → HITL
+```
+
+## Persist-before-act
+
+The rule is simple: **write it down first, then do it.** Before a tool call is queued or sent to a worker, the runtime records it in the database. That way, if the lights go out a millisecond later, the record already exists and recovery has something to act on — there's never an action the runtime doesn't have a note about.
+
+| Step | Persistence |
+|------|-------------|
+| Model emits a call; policy allows | Insert `tool_invocations` row (`pending` or `queued`) |
+| Capacity wait | Status `queued` |
+| HITL required | Status `awaiting_approval` |
+| Dispatch to worker | Status `dispatched` (with worker identity and digests) |
+| Result received | Status `succeeded` or `failed` + payload, then **`result_ack`** to worker |
+
+Assistant messages with `tool_use` blocks are written to session **history** before dispatch; `tool_result` messages append as calls complete. Recovery resumes the turn in provider-correct order **without re-prompting the model** to regenerate calls.
+
+## Invocation statuses
+
+| Status | Meaning |
+|--------|---------|
+| `pending` | Recorded, not yet queued or dispatched |
+| `queued` | Waiting for worker capacity or for a worker to connect |
+| `awaiting_approval` | Blocked on human approval |
+| `dispatched` | Leased to a worker |
+| `succeeded` | Handler completed successfully |
+| `failed` | Handler or routing failure with recorded error |
+| `indeterminate` | Outcome unknown; typically routes to HITL |
+
+The ledger is authoritative: recovery re-dispatches **unfinished rows** by `call_id`, not by replaying the model.
+
+## Session statuses
+
+A session that's **parked** is paused but fully saved: it's not using the model or burning tokens, it's just waiting (for a tool, an approval, or user input) and can be picked back up exactly where it left off — even after a restart.
+
+| Status | When |
+|--------|------|
+| `running` | Model completion or tool loop in progress |
+| `awaiting_tool` | Parked until tool dispatch completes |
+| `awaiting_approval` | Parked for HITL decision |
+| `awaiting_input` | Interactive turn waiting for user input |
+
+Detached sessions survive restart; interactive sessions park at their durable state for client re-attach.
+
+## Capacity queue
+
+When no worker is connected yet, or workers exist but none are idle, calls enter a bounded **FIFO queue per `tool@version`**. The queue is an in-memory cache of `queued` ledger rows, rebuilt on startup from Postgres. Queue wait consumes **wall clock**, not tokens. On deadline or full queue, the call fails or escalates per policy (`dispatch:no_handler` when no worker ever registered; `dispatch:capacity_exhausted` when workers exist but stay busy).
+
+The OSS reference runtime uses Postgres for the ledger and in-process queues plus the **`Work`** stream for delivery—no external message broker.
+
+## Worker resync
+
+Workers keep a result until the runtime sends **`result_ack`**. On **`register`**, workers can list **`in_flight`** `call_id`s. The runtime dedupes by `call_id`, so:
+
+- A result survives a runtime restart.
+- An outstanding lease can be re-attached when the same worker reconnects.
+
+## Startup reconciliation
+
+**Reconciliation** is the runtime comparing what the database says was happening against what's actually running now, and bringing the two back in line. When `phrony-runtime serve` starts, it scans non-terminal sessions with no live in-process driver and reconciles from persisted state:
+
+| Ledger / session state | Action |
+|------------------------|--------|
+| `pending` / `queued` | Re-enqueue (nothing executed yet) |
+| `dispatched` | Wait for worker resync; if worker returns result, resume; else apply side-effect policy (redispatch for `read_only` / `idempotent_write`, else `indeterminate` → HITL) |
+| `running` (mid-completion, no external side effect) | Re-drive turn from last persisted history |
+| `awaiting_approval` | Leave parked; replay approval on re-attach |
+
+Wall-clock watchers are re-armed from session `created_at`.
+
+### Worked example
+
+Five calls emitted, none dispatched (no worker connected or no idle worker):
+
+1. Five `queued` rows + session `awaiting_tool`.
+2. Runtime crashes (in-memory queue lost).
+3. Restart sweep re-enqueues all five from the ledger.
+4. Worker connects → five dispatches, no loss; deterministic `call_id`s prevent duplicates.
+
+## Approvals
+
+Pending HITL decisions live in the **`approvals`** table. Approve or deny survives restart; operators can decide with [`phrony approvals`](/docs/runtime/cli/approvals) or `DecideApproval` gRPC even when no client is attached. See [Human-in-the-loop approvals](/docs/runtime/hitl).
+
+## Side-effect policy on recovery
+
+| `side_effect_class` | After indeterminate outcome |
+|---------------------|----------------------------|
+| `read_only`, `idempotent_write` | May redispatch same `call_id` |
+| `non_idempotent_write`, `irreversible_action` | Mark indeterminate → HITL (no silent double-execution) |
+
+Declare the class on each tool binding in the manifest. See [Tool bindings](/docs/agent-spec/resources/tools).
+
+<UpNext>
+  <Card title="Tool dispatch" href="/docs/runtime/tool-dispatch">
+    Loop and failure modes.
+  </Card>
+  <Card title="Application workers" href="/docs/runtime/tool-workers">
+    Resync and result_ack on the Work stream.
+  </Card>
+</UpNext>

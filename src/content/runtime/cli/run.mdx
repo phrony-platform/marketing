@@ -1,0 +1,125 @@
+---
+title: "run"
+description: "Start a session for the active deployed agent."
+---
+
+## Synopsis
+
+```bash
+phrony run AGENT[@VERSION] [flags]
+```
+
+## Description
+
+<Note>
+  **A session is one execution of an agent** — one conversation/run from start to finish. By default `run` is **detached**: the runtime does the work in the background and hands you a session id to check on later, like submitting a job and getting a ticket number. Add `--attach` to start in the background **and** open a foreground view on the same session.
+</Note>
+
+Starts a new runtime **session** for an agent.
+
+`AGENT` is `namespace/name` (for example `demo/echo-agent`). With no version suffix, the runtime uses the **active deployed** version from the latest [`deploy`](/docs/runtime/cli/deploy) (or [`rollback`](/docs/runtime/cli/rollback)).
+
+You may pass an explicit version as `AGENT@VERSION` or with `--version` / `-v`. That version must match the **currently active** deployment. Published-but-not-deployed versions, retired versions, deprecated versions, and non-active historical versions are rejected.
+
+By default, `phrony run` calls the runtime in **detached** mode: the daemon runs the session in the background, prints the new session id, and the CLI exits. Use [`sessions attach`](/docs/runtime/cli/sessions#sessions-attach) when the session reaches `awaiting_input`, or pass `--attach` / `-a` to start the session and attach in one command.
+
+With **`--attach`**, the CLI calls `RunSession` (background driver) and then `RunSessionInteractive` with only the session id. **Ctrl+C detaches** from the stream; the session keeps running until it finishes or you [`sessions cancel`](/docs/runtime/cli/sessions#sessions-cancel). **Ctrl+D** still ends the interactive stream when you are at a prompt (same as before). Multiple terminals can attach to the same running session.
+
+When the published Agent declares [`secrets`](/docs/agent-spec/resources/secrets), the CLI resolves each `fromEnv` variable on **this machine**, sends the values in a separate gRPC field (`resolved_secrets`, not in the manifest JSON), and the runtime encrypts them into `session_secrets` for the new session. If a referenced variable is missing, run fails with an actionable message. Ciphertext is deleted when the session reaches a terminal status. See [Secrets](/docs/agent-spec/resources/secrets).
+
+**Where values come from:**
+
+- **Shell environment** — export vars before run (for example `export ANTHROPIC_API_KEY=...`) and omit `--env-file`. This is the default path when CI, Docker, or your shell already injects credentials.
+- **`--env-file` / `-e`** — load a dotenv-style file into the process before resolving secrets (repeatable). Variables already set in the shell are **not** overridden.
+- **gRPC callers** — pass `resolved_secrets` on `RunSession` directly (no CLI env resolution).
+
+The flag is optional: you only need `-e` when credentials live in a file rather than the current environment.
+
+## Flags
+
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--version` | `-v` | Active agent version (alternative to `AGENT@version`) |
+| `--input` | | Session input as a JSON object string |
+| `--attach` | `-a` | Start in the background and attach an interactive view |
+| `--env-file` | `-e` | Load environment variables from a file before resolving manifest secrets (repeatable; does not override existing env) |
+
+## Examples
+
+Detached run (default):
+
+```bash
+phrony run demo/echo-agent
+```
+
+Start in the background and attach:
+
+```bash
+phrony run demo/echo-agent --attach
+```
+
+Active deployment with explicit version (must be active):
+
+```bash
+phrony run demo/echo-agent@1.2.0
+phrony run demo/echo-agent -v 1.2.0
+```
+
+With JSON input:
+
+```bash
+phrony run demo/echo-agent --input '{"city":"Oslo"}'
+```
+
+With secrets from the shell (no env file):
+
+```bash
+export ANTHROPIC_API_KEY=sk-...
+phrony run demo/echo-agent
+```
+
+With secrets from a dotenv file:
+
+```bash
+phrony run demo/echo-agent -e .env
+phrony run demo/echo-agent -e .env -e secrets.local.env
+```
+
+`--input` must be valid JSON. If omitted, the runtime uses an empty input object.
+
+## Output
+
+**Detached (default):** one line with the new session id, for example `session run_abc123 started`. Resume later with [`sessions attach`](/docs/runtime/cli/sessions#sessions-attach) when status is `awaiting_input`.
+
+**Attached (`--attach`):** the CLI streams session events: session started, assistant text, awaiting input (when applicable), then completion, failure, or cancellation. When stdin and stdout are TTYs, an interactive terminal UI is used; otherwise output is plain text. **Ctrl+C** closes your view only; use **`phrony sessions cancel`** to stop execution.
+
+New sessions receive ids with a `run_` prefix.
+
+## Human-in-the-loop (approval required)
+
+When a policy requires approval before dispatch, the session moves to **`awaiting_approval`** and the runtime records a pending approval. No worker is invoked until an operator decides.
+
+**Detached runs** (`phrony run` without `--attach`) pause in the background. Approve or reject from another terminal with [`phrony approvals`](/docs/runtime/cli/approvals); the session resumes without holding the interactive stream open.
+
+**Attached runs** (`--attach`) print an `approval_required` event on stderr. You may detach with **Ctrl+C** and decide from another terminal with [`phrony approvals approve`](/docs/runtime/cli/approvals#approvals-approve) or [`reject`](/docs/runtime/cli/approvals#approvals-reject) (recommended), or send `tool_approval` on the same gRPC stream if your client implements it.
+
+```bash
+# Terminal 1
+phrony run weather/weather-assistant --attach --input '{"message":"Send a severe alert for coastal Maine"}'
+
+# Terminal 2 (while status is awaiting_approval)
+phrony sessions ls --status awaiting_approval
+phrony approvals list
+phrony approvals approve <approval-id> --comment "verified"
+```
+
+See [Human-in-the-loop approvals](/docs/runtime/hitl) for quorum, comprehension, timeouts, and recovery after a runtime restart.
+
+<UpNext>
+  <Card title="approvals" href="/docs/runtime/cli/approvals">
+    List, inspect, approve, and reject out of band.
+  </Card>
+  <Card title="sessions" href="/docs/runtime/cli/sessions">
+    List, inspect, attach, and cancel sessions.
+  </Card>
+</UpNext>

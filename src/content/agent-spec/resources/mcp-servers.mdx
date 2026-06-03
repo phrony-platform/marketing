@@ -1,0 +1,201 @@
+---
+title: "MCP servers"
+description: "Declare remote Model Context Protocol servers and bind their tools on an Agent—static schemas, policies, and Phrony secrets."
+---
+
+## Overview
+
+<Note>
+  **MCP tools are still Phrony tools.** The runtime connects to a remote [Model Context Protocol](https://modelcontextprotocol.io) (MCP) server over HTTPS and calls `tools/call` on your behalf. Each capability is declared as a normal `spec.tools` binding with an explicit `input_schema`, `side_effect_class`, and policies—the same enforcement path as [application workers](/docs/runtime/tool-workers). There is no dynamic `tools/list` discovery in v1; you name every remote tool and schema in the manifest.
+</Note>
+
+Use **`spec.mcp_servers`** to declare one or more remote MCP endpoints, then mark individual bindings with **`mcp`** so dispatch routes to the native MCP client instead of the worker registry.
+
+| Topic | Chapter |
+|-------|---------|
+| Worker-backed tools | [Tool bindings](/docs/agent-spec/resources/tools), [Application workers](/docs/runtime/tool-workers) |
+| Dispatch and recovery | [MCP tool dispatch](/docs/runtime/mcp-tools), [Tool dispatch](/docs/runtime/tool-dispatch) |
+| Auth secrets | [Secrets](/docs/agent-spec/resources/secrets) |
+
+### What v1 supports
+
+| Supported | Not in v1 |
+|-----------|-----------|
+| Remote **Streamable HTTP** transport (`streamable_http`, default) | stdio transport |
+| Static tool bindings with explicit `input_schema` | Dynamic `tools/list` catalog merge |
+| Bearer or custom-header auth via `secrets` | OAuth |
+
+## Minimal example
+
+```yaml
+apiVersion: phrony.com/v1
+kind: Agent
+
+metadata:
+  name: search-agent
+  namespace: demo
+  version: 1.0.0
+
+secrets:
+  anthropic:
+    fromEnv: ANTHROPIC_API_KEY
+  mcp_token:
+    fromEnv: MCP_TOKEN
+
+spec:
+  purpose: Answer questions using a remote MCP search server.
+
+  instructions:
+    text: You search the web to answer questions.
+
+  model:
+    provider: anthropic
+    name: claude-sonnet-4-5
+
+  mcp_servers:
+    - name: search
+      url: https://mcp.example.com/mcp
+      auth:
+        scheme: bearer
+        secret: mcp_token
+
+  tools:
+    - ref: search.web
+      as: web_search
+      side_effect_class: read_only
+      input_schema:
+        inline:
+          type: object
+          properties:
+            query: { type: string }
+          required: [query]
+      mcp:
+        server: search
+        tool: web_search
+```
+
+Public servers that need no credentials can omit `auth` on the server entry (for example the DeepWiki endpoint at `https://mcp.deepwiki.com/mcp`).
+
+## spec.mcp_servers
+
+Each entry describes one remote MCP server the runtime dials for the life of a session that uses it.
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `name` | Yes | Stable id referenced by `tools[].mcp.server`; unique within the Agent |
+| `url` | Yes | HTTPS endpoint for Streamable HTTP MCP (for example `https://mcp.example.com/mcp`) |
+| `transport` | No | Must be `streamable_http` when set; defaults to `streamable_http` |
+| `auth` | No | How to authenticate; omit when the server is public |
+
+### auth
+
+When present, `auth` names a key in the top-level **`secrets`** map. At run time the runtime decrypts that secret and attaches the header on every MCP request.
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `scheme` | Yes | `bearer` or `header` |
+| `secret` | Yes | Key in `secrets` (same rules as model provider secrets) |
+| `header` | When `scheme: header` | Custom header name (for example `X-Api-Key`) |
+
+| `scheme` | Request header |
+|----------|----------------|
+| `bearer` | `Authorization: Bearer <secret value>` |
+| `header` | `<header>: <secret value>` |
+
+```yaml
+secrets:
+  mcp_token:
+    fromEnv: MCP_TOKEN
+
+spec:
+  mcp_servers:
+    - name: search
+      url: https://mcp.example.com/mcp
+      auth:
+        scheme: header
+        secret: mcp_token
+        header: X-Api-Key
+```
+
+Resolve secrets at run the same way as model credentials—see [Secrets](/docs/agent-spec/resources/secrets).
+
+## MCP tool bindings
+
+Add **`mcp`** on a `spec.tools` entry to route that binding to a declared server.
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `server` | Yes | `name` of a `spec.mcp_servers` entry |
+| `tool` | No | Remote MCP tool name; defaults to the binding **wire name** (`as`, or derived from `ref`) |
+
+### Required binding fields
+
+MCP-backed bindings do **not** merge a `tools/*.yaml` catalog entry. You must supply everything the runtime needs to present and govern the tool:
+
+| Field | Required for MCP | Notes |
+|-------|-------------------|-------|
+| `ref` | Yes | Logical id `namespace.name` only—**no** `@semver` constraint |
+| `input_schema` | Yes | `ref` or `inline` JSON Schema |
+| `side_effect_class` | Yes | Drives recovery when dispatch is [indeterminate](/docs/runtime/tool-dispatch#failure-modes); MCP does not infer reversibility |
+| `as` | Recommended | Wire name shown to the model when it differs from `ref` |
+| `policies` | As needed | Same `tool:<ref>` scope as worker tools |
+
+```yaml
+spec:
+  tools:
+    - ref: deepwiki.ask_question
+      as: ask_question
+      side_effect_class: read_only
+      input_schema:
+        ref: schemas/ask-question-input
+      mcp:
+        server: deepwiki
+        tool: ask_question
+      policies:
+        - ref: policies/ask-question-allow
+```
+
+<Tip>
+  **`ref` vs `mcp.tool`:** `ref` is the Phrony logical id used for policy scope (`tool:deepwiki.ask_question`) and dispatch routing. `mcp.tool` is the name the remote MCP server expects in `tools/call`. They are often the same string but can differ when the provider uses a different remote name than your logical id.
+</Tip>
+
+### Policies and HITL
+
+Policy evaluation is unchanged. Attach rules on the binding or via `default_policies`; scope tools with `tool:<ref>` where `<ref>` is the binding's logical id (for example `tool:search.web`). Approval, deny, and escalate decisions apply before any MCP HTTP request is sent—see [Policy](/docs/agent-spec/resources/policy) and [Human-in-the-loop approvals](/docs/runtime/hitl).
+
+### Publish and compile
+
+At publish, MCP-backed bindings:
+
+- Skip catalog merge from `tools/*.yaml`
+- Keep `spec.mcp_servers` in the resolved snapshot
+- Still resolve `input_schema` refs and compile policies like worker bindings
+
+`phrony validate` checks server names, HTTPS URLs, secret refs, and MCP binding requirements before publish.
+
+## Validation rules
+
+| Rule | Error when violated |
+|------|---------------------|
+| `mcp_servers[].name` | Empty or duplicate names |
+| `mcp_servers[].url` | Missing, non-HTTPS, or invalid URL |
+| `mcp_servers[].transport` | Value other than `streamable_http` |
+| `mcp_servers[].auth.secret` | Names a key not in `secrets` |
+| `mcp_servers[].auth.header` | Missing when `scheme: header` |
+| `tools[].mcp.server` | References an undeclared server |
+| `tools[].input_schema` | Missing on MCP bindings |
+| `tools[].side_effect_class` | Missing on MCP bindings |
+| `tools[].ref` | Contains `@version` constraint |
+
+## Mixing MCP and workers
+
+One Agent can use both MCP-backed and worker-backed tools. Bindings without `mcp` continue to dispatch to [application workers](/docs/runtime/tool-workers) registered on the `Work` stream. The runtime chooses the backend per binding—see [MCP tool dispatch](/docs/runtime/mcp-tools).
+
+<UpNext>
+  <Card title="Tool bindings" href="/docs/agent-spec/resources/tools">
+    Shared binding fields—as, input_schema, side_effect_class, and policies.
+  </Card>
+  <Card title="Secrets" href="/docs/agent-spec/resources/secrets">
+    fromEnv references, run-time resolution, and session encryption.
+  </Card>
+</UpNext>

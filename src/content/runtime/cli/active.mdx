@@ -1,0 +1,37 @@
+---
+title: "active"
+description: "Show the active deployed version for an agent."
+---
+
+## Synopsis
+
+```bash
+phrony active AGENT
+```
+
+## Description
+
+Prints the version currently activated for sessions in this runtime — the latest [`deploy`](/docs/runtime/cli/deploy) or [`rollback`](/docs/runtime/cli/rollback) — plus when it was activated and by whom.
+
+`AGENT` is `namespace/name`.
+
+## Example
+
+```bash
+phrony active demo/echo-agent
+```
+
+Example output:
+
+```text
+demo/echo-agent@1.2.0 deployed 2026-05-31T12:00:00Z by ci@github
+```
+
+<UpNext>
+  <Card title="deploy" href="/docs/runtime/cli/deploy">
+    Change the active version.
+  </Card>
+  <Card title="run" href="/docs/runtime/cli/run">
+    Execute the active version in a new session.
+  </Card>
+</UpNext>

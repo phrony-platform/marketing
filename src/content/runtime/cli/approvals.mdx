@@ -1,0 +1,125 @@
+---
+title: "approvals"
+description: "List, inspect, and decide pending human approvals out of band."
+---
+
+## Synopsis
+
+```bash
+phrony approvals <subcommand> [args] [flags]
+```
+
+## Description
+
+Operator commands for the runtime approval queue. Use these when a session is `awaiting_approval` and you are not attached to the interactive stream.
+
+See [Human-in-the-loop approvals](/docs/runtime/hitl) for policy semantics, timeouts, and gRPC shapes.
+
+---
+
+## `approvals list`
+
+```bash
+phrony approvals list [flags]
+```
+
+### Flags
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--status` | `pending` | Filter by approval status |
+| `--route` | | Filter by route |
+| `--session-id` | | Filter by session id |
+| `--agent` | | Filter by agent `namespace/name` |
+
+### Examples
+
+```bash
+phrony approvals list
+phrony approvals list --status pending --route supervisor
+phrony approvals list --session-id run_abc123 --agent weather/weather-assistant
+```
+
+### Output
+
+Table columns: `ID`, `STATUS`, `SESSION_ID`, `TOOL`, `ROUTE`, `RECEIVED` (quorum as `received/required`), `EXPIRES_AT`.
+
+---
+
+## `approvals show`
+
+```bash
+phrony approvals show APPROVAL_ID
+```
+
+Prints one approval in key-value form: ids, `tool@version`, `args` JSON, `reason`, `policy`, `authority_ref`, quorum, `comprehension_required`, `on_reject`, `expires_at`, and prior `vote` lines.
+
+### Example
+
+```bash
+phrony approvals show apr_xyz789
+```
+
+---
+
+## `approvals approve`
+
+```bash
+phrony approvals approve APPROVAL_ID [flags]
+```
+
+### Flags
+
+| Flag | Description |
+|------|-------------|
+| `--comment` | Operator comment stored on the decision |
+| `--args` | Path to JSON file replacing proposed tool args |
+| `--comprehension` | Required when policy sets `comprehension_required: true` |
+
+Records the operator **actor** from `PHRONY_ACTOR` when set, otherwise the OS username (same as [`publish`](/docs/runtime/cli/publish)).
+
+When policy sets `on_modify: revalidate`, edited `--args` re-run the policy chain before dispatch.
+
+### Examples
+
+```bash
+phrony approvals approve apr_xyz789 --comment "verified region"
+phrony approvals approve apr_xyz789 --args ./edited-alert.json --comprehension
+```
+
+### Output
+
+After a successful decide:
+
+```text
+status: approved
+approvals_received: 1
+session_status: running
+```
+
+With multi-approver quorum not yet met, `status` is `pending` and the session stays blocked until enough distinct actors approve.
+
+---
+
+## `approvals reject`
+
+```bash
+phrony approvals reject APPROVAL_ID [--comment TEXT]
+```
+
+Respects policy `on_reject` (`return_to_agent` or `fail`).
+
+### Example
+
+```bash
+phrony approvals reject apr_xyz789 --comment "severity too high"
+```
+
+<UpNext>
+  <Card title="Human-in-the-loop" href="/docs/runtime/hitl">
+    Policy semantics, timeouts, and the gRPC API.
+  </Card>
+  <Card title="run" href="/docs/runtime/cli/run">
+    Start sessions that may pause at awaiting_approval.
+  </Card>
+</UpNext>

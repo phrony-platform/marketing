@@ -1,0 +1,197 @@
+---
+title: "Overview"
+description: "Install and run the Phrony Agent Spec reference runtime."
+---
+
+## What is the runtime?
+
+<Note>
+  **If the manifest is the recipe, the runtime is the kitchen.** It's the long-running program that actually executes your agents: it holds the published manifests, decides which version is live, runs each session (calling the model, dispatching tools, enforcing policies and limits, pausing for human approval), records what happened, and hands back the result. Your application doesn't run the agent itself — it asks the runtime to.
+</Note>
+
+The **Phrony runtime** is the official open-source implementation of the [Phrony Agent Spec](/docs/agent-spec). It stores published agent manifests, activates versions for execution, runs sessions (model loop, tools, policies, limits, and human-in-the-loop), emits structured traces, and returns results. Applications call the runtime over gRPC; the runtime is where agents live.
+
+<Info>
+  **gRPC** is just the way programs talk to the runtime over the network — a fast, typed alternative to a REST/HTTP API. You rarely call it by hand; the `phrony` CLI and the SDKs speak it for you.
+</Info>
+
+You'll work with two programs from the [runtime repository](https://github.com/phrony-platform/runtime). One is the always-on server (a **daemon** — a background process that keeps running and waits for requests); the other is the command-line tool you type into:
+
+| Binary | Role | Think of it as |
+|--------|------|----------------|
+| `phrony-runtime` | Daemon: Postgres migrations, gRPC server, publish/deploy, and session execution | The server that does the work |
+| `phrony` | Operator CLI over gRPC (`publish`, `deploy`, `run`, `agents`, …) and local manifest checks (`init`, `validate`) | The remote control you hold |
+
+### Concept examples
+
+**Manifest → runtime** (your app does not embed the agent loop):
+
+```bash
+# You write agent.yaml locally
+phrony publish ./my-agent/agent.yaml    # runtime stores version 1.0.0
+phrony deploy demo/my-agent@1.0.0       # version 1.0.0 is now "live"
+curl -X POST .../agent.run             # or: phrony run demo/my-agent
+```
+
+**Session** (one execution from start to finish):
+
+```text
+phrony run demo/echo-agent
+→ session id: run_abc123
+→ status: running → awaiting_input → completed
+```
+
+**gRPC** (how the CLI talks to the daemon — you usually don't write this yourself):
+
+```bash
+export PHRONY_RUNTIME_ADDR=127.0.0.1:7777
+phrony status   # CLI → gRPC → phrony-runtime
+```
+
+The Node-based Phrony CLI used for manifest authoring and packaging is separate. This documentation covers the Go runtime daemon and its operator CLI.
+
+## Prerequisites
+
+- Docker Desktop or Docker Engine (recommended local path)
+- Go 1.25+ (only if you build or run binaries on your host)
+
+<Card title="Quick start" href="/docs/quick-start">
+  New to Phrony? Follow three steps: [set up the runtime](/docs/quick-start/setup-runtime), [write your first manifest](/docs/quick-start/write-manifest), then [publish, deploy, and run](/docs/quick-start/publish-deploy-run).
+</Card>
+
+## Run the runtime on your host (development)
+
+When you are changing Go code, run only Postgres in Compose and start `phrony-runtime` locally:
+
+```bash
+docker compose up -d postgres --wait
+make migrate
+make serve
+```
+
+Do not run `make serve` on the host while the compose `runtime` service is also using port **7777**.
+
+| Make target | Description |
+|-------------|-------------|
+| `make dev-up` | Postgres + runtime in Docker (`docker compose up`) |
+| `make dev-down` | Stop the compose stack |
+| `make migrate` | Apply migrations to localhost Postgres |
+| `make serve` | Run `phrony-runtime serve` on the host |
+
+## Install binaries
+
+### Released builds
+
+Install the runtime daemon with `go install`:
+
+```bash
+go install github.com/phrony-platform/runtime/cmd/phrony-runtime@latest
+```
+
+Install the operator CLI as `phrony` (the package path is `cmd/cli`, so use `go build -o`):
+
+```bash
+go build -o "$(go env GOPATH)/bin/phrony" \
+  github.com/phrony-platform/runtime/cmd/cli@latest
+```
+
+Ensure `$(go env GOPATH)/bin` is on your `PATH`. You still need Postgres (and typically Docker Compose) unless you provide your own database URL.
+
+### Build from a local checkout
+
+```bash
+make build
+export PATH="$(pwd)/bin:$PATH"
+```
+
+This produces `bin/phrony-runtime` and `bin/phrony`.
+
+### Install only the operator CLI
+
+From the repository root:
+
+| Command | Installs to |
+|---------|-------------|
+| `make install-cli` | `$(go env GOPATH)/bin/phrony` (or `GOBIN` when set) |
+| `make install-cli-path` | `~/.local/bin/phrony` and updates your shell `PATH` (recommended) |
+
+Prefer `make install-cli-path` when you want flags like `--namespace` to reach the CLI without Make interpreting them.
+
+## Environment variables
+
+Copy `.env.example` to `.env` for host-side tools. Load the file before running binaries directly:
+
+```bash
+set -a && source .env && set +a
+```
+
+`make` targets (`serve`, `cli`, `migrate`, …) load `.env` or `.env.example` automatically.
+
+| Variable | Used by | Description |
+|----------|---------|-------------|
+| `RUNTIME_DATABASE_URL` | `phrony-runtime` on the host | Postgres connection string (`localhost:5432` with compose Postgres) |
+| `RUNTIME_GRPC_ADDR` | `phrony-runtime` on the host | gRPC listen address (default `127.0.0.1:7777`; use `0.0.0.0:7777` inside Docker) |
+| `RUNTIME_SECRETS_ENCRYPTION_KEY` | `phrony-runtime` | AES-256 master key for encrypting session-scoped secrets (32 bytes, base64 or hex). Required when running sessions for agents with a `secrets` section. Generate with `openssl rand -base64 32` |
+| `RUNTIME_TOOL_ALLOWLIST` | `phrony-runtime` | Path to a YAML tool allowlist for dispatch-time integrity checks (optional). See [Tool integrity](/docs/runtime/tool-integrity) |
+| `RUNTIME_DISPATCH_QUEUE_WAIT` | `phrony-runtime` | Max time a tool call may wait in the worker queue when no handler is free (default `10s`). Go duration (`5s`, `500ms`) or positive integer seconds (`30`). Invalid values fall back to `10s`. Applied even when the session wall-clock budget is longer. See [Tool dispatch](/docs/runtime/tool-dispatch#failure-modes) |
+| `RUNTIME_ENABLE_STUB_PROVIDER` | `phrony-runtime` | Dev-only: enable the scripted stub model provider (`true`, `1`, or `yes`) for local e2e scenarios |
+| `PHRONY_RUNTIME_ADDR` | `phrony` on the host | Runtime gRPC endpoint (default `127.0.0.1:7777` when using compose) |
+| `PHRONY_ACTOR` | `phrony` on the host | Audit identity for publish, deploy, and rollback (defaults to OS username) |
+| `PHRONY_NO_TUI` | `phrony` | Disable the interactive session TUI (plain stdout) |
+| `NO_COLOR` | `phrony diff` | Disable colorized diff output (also disabled when stdout is not a TTY). See [`diff`](/docs/runtime/cli/diff) |
+
+The compose `runtime` service sets its own `RUNTIME_DATABASE_URL` (hostname `postgres`), `RUNTIME_GRPC_ADDR=0.0.0.0:7777`, and a dev `RUNTIME_SECRETS_ENCRYPTION_KEY` in `docker-compose.yml`.
+
+Session provider API keys (for example `ANTHROPIC_API_KEY`) are resolved on the **operator host** when you run `phrony run`—from the shell environment, from `-e` / `--env-file`, or supplied by your backend in `RunSession`—not configured on the runtime daemon. See [`run`](/docs/runtime/cli/run) and [Secrets](/docs/agent-spec/resources/secrets).
+
+## `phrony-runtime` commands
+
+When running the daemon outside Docker, with Postgres up and `.env` loaded:
+
+```bash
+phrony-runtime serve
+```
+
+`serve` applies schema migrations (unless you pass `--skip-migrate`), then starts the gRPC server.
+
+Migrations only:
+
+```bash
+phrony-runtime migrate
+```
+
+| Subcommand | Description |
+|------------|-------------|
+| `serve` | Migrate (optional) and start gRPC |
+| `migrate` | Apply migrations and exit |
+
+| Flag | Subcommand | Description |
+|------|------------|-------------|
+| `--skip-migrate` | `serve` | Skip schema migration on startup |
+
+## Local development
+
+| Make target | Description |
+|-------------|-------------|
+| `make dev-up` | Start Postgres + runtime (`docker compose up`) |
+| `make dev-down` | Stop the compose stack |
+| `make migrate` | Migrations only (Postgres on localhost) |
+| `make serve` | Run `phrony-runtime serve` on the host |
+| `make cli …` | Operator CLI via `go run` (e.g. `make cli status`) |
+| `make build` | Build `bin/phrony` and `bin/phrony-runtime` |
+| `make test` | Unit tests (`-short`) |
+
+Run `make` with no arguments for the full target list.
+
+## Tool dispatch
+
+The runtime authorizes every tool call, routes worker-backed tools over the `Work` gRPC stream, routes [MCP-backed](/docs/agent-spec/resources/mcp-servers) tools over Streamable HTTP, and records invocations in Postgres. See [Tool dispatch](/docs/runtime/tool-dispatch) for the execution loop, [MCP tool dispatch](/docs/runtime/mcp-tools), failure modes, [workers](/docs/runtime/tool-workers), [integrity allowlist](/docs/runtime/tool-integrity), and [recovery](/docs/runtime/tool-durability).
+
+<UpNext>
+  <Card title="Tool dispatch" href="/docs/runtime/tool-dispatch">
+    Model tool-use loop, workers, MCP routing, integrity, and durable recovery.
+  </Card>
+  <Card title="CLI reference" href="/docs/runtime/cli">
+    Operator commands: publish, deploy, run, rollback, and agent lifecycle.
+  </Card>
+</UpNext>

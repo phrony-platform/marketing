@@ -1,0 +1,35 @@
+---
+title: "versions"
+description: "List published versions for an agent."
+---
+
+## Synopsis
+
+```bash
+phrony versions AGENT
+```
+
+## Description
+
+Lists immutable versions published for one agent. `AGENT` is `namespace/name`.
+
+Publishing does not imply the version is active for sessions — check [`active`](/docs/runtime/cli/active) or [`history`](/docs/runtime/cli/history).
+
+## Example
+
+```bash
+phrony versions demo/echo-agent
+```
+
+## Output
+
+Table columns: `VERSION`, `ID`, `CONTENT_HASH`, `PUBLISHED_AT`, `STATUS` (`published`, `deprecated`, or `retired`).
+
+<UpNext>
+  <Card title="publish" href="/docs/runtime/cli/publish">
+    Add a new immutable version.
+  </Card>
+  <Card title="deploy" href="/docs/runtime/cli/deploy">
+    Activate a version for sessions.
+  </Card>
+</UpNext>

@@ -1,0 +1,37 @@
+---
+title: "init"
+description: "Scaffold a new agent.yaml locally."
+---
+
+## Synopsis
+
+```bash
+phrony init [DIR]
+```
+
+## Description
+
+Writes a minimal `agent.yaml` in `DIR` (default: current working directory). Does not contact the runtime.
+
+Fails if `agent.yaml` already exists in the target directory.
+
+## Example
+
+```bash
+phrony init ./weather-assistant
+```
+
+On success:
+
+```text
+created ./weather-assistant/agent.yaml
+```
+
+<UpNext>
+  <Card title="validate" href="/docs/runtime/cli/validate">
+    Check the scaffolded manifest.
+  </Card>
+  <Card title="Agent definition" href="/docs/agent-spec/resources/agent">
+    Full field reference for kind: Agent.
+  </Card>
+</UpNext>

@@ -1,0 +1,41 @@
+---
+title: "validate"
+description: "Validate an agent manifest locally."
+---
+
+## Synopsis
+
+```bash
+phrony validate MANIFEST
+```
+
+## Description
+
+Parses and resolves an agent manifest bundle on disk. Does **not** contact the runtime or publish anything. Use this before [`publish`](/docs/runtime/cli/publish) to catch schema and resolution errors early.
+
+`MANIFEST` is the path to the primary Agent YAML file (for example `weather-assistant/agent.yaml`).
+
+Validation includes the Agent [`secrets`](/docs/agent-spec/resources/secrets) section when present: secret names, `fromEnv` references, rejection of inline values, and `spec.model.secret` consistency. It does **not** read or send secret values to the runtime.
+
+When the manifest declares `secrets`, `validate` prints a **warning** to stderr for each `fromEnv` variable that is unset or empty in your local environment (dry-run only). Set those variables (or use [`run -e`](/docs/runtime/cli/run#examples) to load a file) before starting a session.
+
+## Example
+
+```bash
+phrony validate path/to/agent.yaml
+```
+
+On success, prints the resolved namespace, name, and version:
+
+```text
+valid: demo/echo-agent 1.0.0
+```
+
+<UpNext>
+  <Card title="publish" href="/docs/runtime/cli/publish">
+    Publish a validated manifest to the runtime.
+  </Card>
+  <Card title="Conventions" href="/docs/agent-spec/conventions">
+    Bundle layout and ref resolution.
+  </Card>
+</UpNext>

@@ -1,0 +1,310 @@
+---
+title: "Conventions"
+description: "apiVersion, organizing principles, metadata, bundle layout, semver, and ref resolution for Phrony Agent Spec v1."
+---
+
+<Note>
+  **What this page is for.** Before the individual resources (Agent, Tool, Policy), there are a handful of rules they *all* follow: how every file is labeled, which fields actually change behavior versus which are just notes, how versions and file references work. Learn these once here and the rest of the spec reads easily. If a term looks unfamiliar, the callouts below define it in plain language.
+</Note>
+
+## apiVersion and kind
+
+If you've written Kubernetes YAML this will look familiar; if you haven't, here's the idea: every Phrony file begins by stating two things — **which version of the format it's written in** (`apiVersion`) and **what type of thing it describes** (`kind`). That lets any tool read the file and know how to interpret the rest.
+
+Every manifest document shares the same top-level shape: `apiVersion`, `kind`, `metadata`, and `spec` (plus kind-specific top-level fields such as `secrets` on Agent).
+
+| Field | Value | Meaning |
+|-------|--------|---------|
+| `apiVersion` | `phrony.com/v1` | Canonical schema family for this document |
+| `kind` | `Agent`, `Tool`, `Policy`, … | Resource type |
+
+Phrony’s canonical DNS owner name is **`phrony.com`**. Use `phrony.com/v1` in all manifests and examples.
+
+Core authoring kinds share the same `apiVersion`:
+
+| `kind` | Role |
+|--------|------|
+| `Agent` | Runnable agent definition (bindings, limits, output) |
+| `Tool` | Tool contract (schemas, side-effect class, default policies) |
+| `Policy` | Portable policy (conditions, `decision`) |
+
+See the **Kinds** group: [Tool](/docs/agent-spec/resources/tool), [Policy](/docs/agent-spec/resources/policy), [Tool bindings](/docs/agent-spec/resources/tools).
+
+```yaml
+apiVersion: phrony.com/v1   # format version
+kind: Agent                 # this file describes an Agent
+metadata:
+  name: weather-assistant
+spec:
+  purpose: Answer weather questions and call forecast tools.
+```
+
+## Organizing principles
+
+Every field in a manifest can be sorted by asking two simple questions. The spec calls these two questions "cuts" — independent ways of slicing the same fields.
+
+1. **Does the runtime *act* on this field, or just *record* it?** (enforced vs descriptive)
+2. **Does *every* runtime understand this field, or only ones that opted into a specific add-on?** (portable core vs framework packs)
+
+Keeping these two questions separate is what lets the spec stay small and universal while still carrying optional, regulation-specific detail.
+
+### Cut 1 — Enforced vs descriptive
+
+**Enforced** fields change what the agent is allowed to do — the runtime reads them and behaves differently. **Descriptive** fields are notes for humans and audit logs; the runtime stores them but never makes a decision based on them.
+
+| Class | Rule | Examples |
+|-------|------|----------|
+| **Enforced** | The runtime **branches** on the value; execution behavior changes | `input_schema`, `output_schema`, policies, budgets, `side_effect_class`, `available_when`, authority boundaries compiled from `metadata.governance` |
+| **Descriptive** | **Inert at evaluation**; recorded in the run **evidence** ledger | `metadata.governance.risk_tier`, `owner`, `labels`, `annotations`, framework pack payloads when not validated |
+
+Governance **origin** is not the same as the evaluation boundary. Fields such as `metadata.governance.authority_boundaries` are governance in origin but **enforced**: a conformant publish pipeline compiles them into policies the runtime evaluates. `risk_tier` is governance in origin but **purely descriptive**—a reference into the deployer’s taxonomy, not a fixed global enum.
+
+```yaml
+# Enforced — runtime rejects invalid model output
+output:
+  strict: true
+  on_invalid: fail
+
+# Descriptive — stored in evidence only; does not change behavior
+metadata:
+  labels:
+    cost-center: CC-4471
+```
+
+### Cut 2 — Portable core vs pluggable regime
+
+The **portable core** is the part every compliant runtime must understand — generic concepts like risk level or named authority boundaries. **Framework packs** are optional, namespaced add-ons for a specific regulation (for example the EU AI Act). A runtime that doesn't know a given pack still carries it along and marks it "present but unvalidated" rather than dropping it.
+
+| Layer | Content |
+|-------|---------|
+| **Portable core** | Jurisdiction-agnostic declarations any conformant runtime understands: risk level as a taxonomy reference, named authority boundaries, classifications, controls |
+| **Framework packs** | Versioned, namespaced blobs attached when relevant (for example `eu-ai-act/v1`, `nist-ai-rmf/v1`), similar to OpenTelemetry semantic convention registries |
+
+**Conformance for framework packs:**
+
+- **Known pack** (registered in the spec or runtime): validate at deploy; approval gates apply where the pack defines them.
+- **Unknown pack**: **carry, record, and surface “present but unvalidated”**—never drop silently and never assume compliance.
+
+US-centric manifests omit EU-only pack fields (for example `annex_iii_category` lives only inside `eu-ai-act/v1`, not in the portable core).
+
+```yaml
+# Portable core (every runtime understands)
+metadata:
+  governance:
+    risk_tier: high
+
+# Framework pack (regulation-specific add-on)
+metadata:
+  governance:
+    frameworks:
+      eu-ai-act/v1:
+        role: provider
+        annex_iii_category: credit-scoring
+```
+
+## Shared metadata
+
+All kinds expose a common `metadata` object. Three **tiers** separate portable description from implementation-specific config elsewhere in the document (for example `decision.runtime` on Policy—see the Policy chapter).
+
+### `metadata.governance`
+
+Governance block for risk, authority, classifications, and optional framework packs.
+
+| Field | Enforced? | Description |
+|-------|-----------|-------------|
+| `risk_tier` | No (descriptive) | Customer taxonomy reference (for example `high`); not a fixed spec enum |
+| `authority_boundaries` | Yes (via compile) | Symbolic boundary ids; publish compiles into policies the runtime evaluates |
+| `classifications` | No (descriptive) | Tags from the deployer’s taxonomy (for example `weather.high-impact-external`) |
+| `frameworks` | Pack-dependent | Map of framework pack id → pack payload (see below) |
+
+Example (Agent; Tool and Policy support the same tiers with a subset where noted in their chapters):
+
+```yaml
+metadata:
+  name: weather-assistant
+  namespace: weather
+  version: 2.4.0
+  governance:
+    risk_tier: high
+    authority_boundaries:
+      - weather.alert-authority
+    classifications:
+      - weather.high-impact-external
+    frameworks:
+      eu-ai-act/v1:
+        role: provider
+        annex_iii_category: credit-scoring
+  labels:
+    owning-team: weather-platform
+  annotations:
+    cost-center: "CC-4471"
+```
+
+`authority_ref` on a policy `decision` is a **symbolic** link into this taxonomy. It does not perform authorization; conformant runtimes do not resolve IdP roles from portable fields.
+
+### `metadata.labels`
+
+Key–value pairs for fleet filtering, monitoring, and ownership (`domain`, `tier`, `owning-team`, …). **Descriptive only**—recorded in evidence, not used to branch execution unless your operator maps them outside the spec.
+
+### `metadata.annotations`
+
+Arbitrary string metadata for cost centers, ticket ids, or internal references. **Descriptive only**, same evidence rules as `labels`.
+
+<Warning>
+  Do not put secrets, endpoints, or credentials in `labels` or `annotations`. Use `secrets` and implementation-specific extension blocks documented per kind.
+</Warning>
+
+### Framework packs (`metadata.governance.frameworks`)
+
+Framework packs are **regime-specific** extensions keyed by a versioned id (`eu-ai-act/v1`, `nist-ai-rmf/v1`, …). Keys are regime names, not Phrony DNS names.
+
+| Pack state | Publish / deploy | Runtime |
+|------------|------------------|---------|
+| Known pack | Validate against pack schema; enforce pack-defined gates | Evaluate enforced pack rules; record pack in evidence |
+| Unknown pack | Accept document; flag **unvalidated** | Carry payload; record in evidence; surface unvalidated status |
+
+Example EU AI Act pack (fields are defined by the pack, not the portable core):
+
+```yaml
+frameworks:
+  eu-ai-act/v1:
+    role: provider
+    annex_iii_category: credit-scoring
+```
+
+Portable core fields such as `risk_tier` and `authority_boundaries` remain meaningful without any framework pack attached.
+
+### Two extension surfaces (keep separate)
+
+Portable description and implementation config use **different blocks**. Do not merge IdP role names into `metadata.governance` or put taxonomy refs under `decision.runtime`.
+
+<ExtensionSurfacesIllustration />
+
+## Bundle layout
+
+An Agent is authored as a **bundle**: one primary YAML file plus referenced content on disk. The bundle root is the directory that contains the Agent YAML file (for example `weather-assistant/agent.yaml`).
+
+```
+weather-assistant/
+  agent.yaml
+  tools/                              # optional: kind Tool
+    get-forecast.yaml
+    send-alert.yaml
+  policies/                           # optional: kind Policy
+    high-severity-alert-boundary.yaml
+  prompts/
+    weather-assistant.yaml
+  schemas/
+    forecast-result.json
+```
+
+At **publish time**, a conformant runtime (or publish pipeline) parses and validates the Agent, resolves `ref` fields relative to the bundle root, and persists a **resolved snapshot**. The runtime stores the canonical resolved manifest—it does not need ongoing access to the author’s local filesystem paths.
+
+<Note>
+  In v1, `instructions.ref` and `output.schema.ref` are resolved at publish time. Tool `input_schema` (and binding alias `parameters`) may use `ref` or `inline`. See [Tool](/docs/agent-spec/resources/tool) and [Tool bindings](/docs/agent-spec/resources/tools).
+</Note>
+
+## Ref resolution
+
+A **ref** ("reference") is a pointer: instead of pasting a prompt, schema, or policy directly into the Agent file, you point to where it lives and the publish step pulls it in for you. This keeps the Agent file readable and lets several agents share the same content.
+
+Refs fall into two families: **bundle-relative file refs** (paths on disk) and **logical refs** (catalog ids resolved at publish).
+
+```yaml
+# File ref — publish reads prompts/weather-assistant.yaml
+spec:
+  instructions:
+    ref: prompts/weather-assistant
+
+# Logical ref — publish resolves weather.send-alert@^1.0
+spec:
+  tools:
+    - ref: weather.send-alert@^1.0
+```
+
+### File refs (bundle-relative)
+
+File refs are **paths relative to the bundle root** (the directory of the Agent YAML file), without a leading slash.
+
+| Ref in YAML | Resolved path (default) |
+|-------------|-------------------------|
+| `prompts/weather-assistant` | `prompts/weather-assistant.yaml` |
+| `schemas/forecast-result` | `schemas/forecast-result.json` |
+| `tools/send-alert` | `tools/send-alert.yaml` |
+| `policies/high-severity-alert-boundary` | `policies/high-severity-alert-boundary.yaml` |
+
+**Search order** when the ref has no extension:
+
+1. **Instructions** (`spec.instructions.ref`): try `.yaml`, then `.md`, under the bundle root.
+2. **JSON Schema** (`output.schema.ref`, Tool `input_schema.ref`, Tool `output_schema.ref`, binding `input_schema.ref`): try `.json` under the bundle root.
+3. **Tool and Policy documents** (when referenced by file path): try `.yaml` under the bundle root.
+
+You may include the extension in the ref (for example `prompts/weather-assistant.yaml`) to override the default.
+
+Optional `version` on a schema or instructions ref selects a governed revision:
+
+- **Instructions**: `version` is a content revision label (for example prompt version `5`); the runtime stores the resolved text with the deployed snapshot.
+- **Schema**: `version` is a schema revision label (for example `3`); the runtime stores the resolved JSON Schema with the deployed snapshot.
+
+Publish fails if a ref path does not exist or if a schema file is not valid JSON.
+
+### Logical refs (catalog)
+
+Tool bindings and policy attachments use **logical ids** that the publish pipeline resolves to documents in the bundle or a governed registry:
+
+| Location | Example | Resolves to |
+|----------|---------|-------------|
+| Tool binding `ref` | `weather.send-alert@^1.0` | `tools/send-alert.yaml` or catalog entry |
+| Binding or Tool `default_policies` | `weather.high-severity-alert-boundary` | `policies/high-severity-alert-boundary.yaml` |
+| Policy file ref (alternative) | `ref: policies/high-severity-alert-boundary` | Bundle-relative Policy document |
+
+Logical ref format is **`namespace.name`**, matching `metadata.namespace` and `metadata.name` on the target document. An optional **`@semver`** constraint on tool bindings selects a compatible contract version.
+
+**Deploy pins versions:** publish narrows semver to one concrete tool version and inlines resolved schemas in the **resolved snapshot**. Deploy may further **narrow** schemas or policies but must not **widen** beyond that pin.
+
+### Mutual exclusion on schema-bearing fields
+
+Exactly one of `ref` (+ optional `version`) or `inline` for:
+
+- `output.schema`
+- Tool `input_schema` and `output_schema`
+- Binding `input_schema`
+
+## Semver and version identity
+
+**Semver** (semantic versioning) is the familiar `MAJOR.MINOR.PATCH` numbering — `2.4.0` means major version 2, minor 4, patch 0. The numbers signal intent: bump the last for a fix, the middle for a backward-compatible addition, the first for a breaking change.
+
+`metadata.version` is a **semver** string for humans, CI, and release notes (for example `2.4.0`). It is required on every Agent document.
+
+```yaml
+metadata:
+  version: 2.4.0   # label for humans and CI
+# After publish, runtime also stores an internal id (e.g. av_8f3a…) for that exact snapshot
+```
+
+The runtime assigns a stable **internal version id** when you publish. Traces and APIs can refer to both the semver label and the internal id. **Deploy** (activation) is separate: only the active deployed version is eligible for new sessions in a given runtime instance.
+
+<Warning>
+  Do not rely on semver alone as the only runtime identifier across environments. Two publishes of the same semver with different resolved content produce different internal ids and snapshots.
+</Warning>
+
+## Mutual-exclusion rules
+
+These rules apply across conformant tooling and runtimes:
+
+| Location | Rule |
+|----------|------|
+| `spec.instructions` | Exactly one of `ref` (+ optional `version`) or `text` |
+| `output.schema` | Exactly one of `ref` (+ optional `version`) or `inline` (JSON Schema object) |
+| Tool / binding schemas | Exactly one of `ref` (+ optional `version`) or `inline` for each schema object |
+| `spec.model.parameters` | Set **`temperature` or `top_p`**, not both (provider pass-through) |
+| `secrets.<name>` | Name must match `[a-z][a-z0-9_-]*`; v1 entries use **`fromEnv` only** (no inline values) |
+
+<UpNext>
+  <Card title="Agent definition" href="/docs/agent-spec/resources/agent">
+    Full field reference, limits, output contract, and canonical example.
+  </Card>
+  <Card title="Tool" href="/docs/agent-spec/resources/tool">
+    Portable tool contract—schemas, side_effect_class, and default policies.
+  </Card>
+</UpNext>

@@ -1,0 +1,44 @@
+---
+title: "deploy"
+description: "Activate a published agent version for sessions."
+---
+
+## Synopsis
+
+```bash
+phrony deploy AGENT@VERSION
+```
+
+## Description
+
+Records a **deployment** so the given published version becomes the **active** version for [`run`](/docs/runtime/cli/run) in this runtime. The version must already exist from [`publish`](/docs/runtime/cli/publish) and must not be retired, deprecated, or part of an archived agent.
+
+`AGENT@VERSION` is `namespace/name@semver` (for example `demo/echo-agent@1.2.0`).
+
+Publishing manifest content (including ref-only `secrets`) happens in [`publish`](/docs/runtime/cli/publish). Secret **values** are supplied at [`run`](/docs/runtime/cli/run). Deploy only switches which published version is active.
+
+The runtime records **`deployed_by`** from `PHRONY_ACTOR` (or the OS user when unset).
+
+## Example
+
+```bash
+phrony publish path/to/agent.yaml
+phrony deploy demo/echo-agent@1.2.0
+```
+
+On success:
+
+```text
+deployed demo/echo-agent@1.2.0 (previous: 1.1.0) at 2026-05-31T12:00:00Z
+```
+
+When there was no previous active version, the `(previous: …)` segment is omitted.
+
+<UpNext>
+  <Card title="publish" href="/docs/runtime/cli/publish">
+    Create the immutable version first.
+  </Card>
+  <Card title="active" href="/docs/runtime/cli/active">
+    Show which version is active for new runs.
+  </Card>
+</UpNext>

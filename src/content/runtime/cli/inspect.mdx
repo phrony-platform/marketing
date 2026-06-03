@@ -1,0 +1,31 @@
+---
+title: "inspect"
+description: "Show metadata for a published agent version."
+---
+
+## Synopsis
+
+```bash
+phrony inspect AGENT@VERSION
+```
+
+## Description
+
+Prints metadata for one published version: content hash, publish time, and optional deprecation or retirement timestamps.
+
+`AGENT@VERSION` is `namespace/name@semver`.
+
+## Example
+
+```bash
+phrony inspect demo/echo-agent@1.2.0
+```
+
+<UpNext>
+  <Card title="diff" href="/docs/runtime/cli/diff">
+    Compare local manifest to this version.
+  </Card>
+  <Card title="versions" href="/docs/runtime/cli/versions">
+    List all published versions for an agent.
+  </Card>
+</UpNext>

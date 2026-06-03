@@ -1,0 +1,124 @@
+---
+title: "sessions"
+description: "List, inspect, attach to, and cancel agent sessions."
+---
+
+## Synopsis
+
+```bash
+phrony sessions <subcommand> [args] [flags]
+```
+
+## Description
+
+Inspect runtime sessions and attach to an existing session by id.
+
+While a session is **running**, **awaiting_tool**, **awaiting_approval**, or **awaiting_input**, the daemon keeps a single background **driver** per session. **`sessions attach`** (and `phrony run --attach` after start) subscribes to that driver’s event stream. Closing the attach view with **Ctrl+C** only unsubscribes; execution continues until the session reaches a terminal status or you **`sessions cancel`**. More than one client may attach to the same active session and receive live events.
+
+---
+
+## `sessions ls`
+
+List sessions, optionally filtered by agent or status.
+
+```bash
+phrony sessions ls [AGENT] [flags]
+```
+
+When `AGENT` is omitted, lists sessions across all agents. When set, `AGENT` is `namespace/name`.
+
+### Flags
+
+| Flag | Description |
+|------|-------------|
+| `--status` | Filter by status: `pending`, `running`, `awaiting_approval`, `awaiting_input`, `completed`, `failed`, `cancelled` |
+
+### Examples
+
+```bash
+phrony sessions ls
+phrony sessions ls demo/echo-agent
+phrony sessions ls demo/echo-agent --status awaiting_input
+phrony sessions ls --status awaiting_approval
+```
+
+### Output
+
+Table columns: `ID`, `STATUS`, `UPDATED_AT`, `RESUMABLE` (`yes` when status is `awaiting_input`).
+
+Sessions in **`awaiting_approval`** are waiting on an operator decision. Use [`phrony approvals`](/docs/runtime/cli/approvals) to list and decide pending approvals; see [Human-in-the-loop approvals](/docs/runtime/hitl).
+
+---
+
+## `sessions inspect`
+
+Show metadata for one session.
+
+```bash
+phrony sessions inspect SESSION_ID
+```
+
+### Example
+
+```bash
+phrony sessions inspect run_abc123
+```
+
+---
+
+## `sessions attach`
+
+Connect to an existing session by id.
+
+```bash
+phrony sessions attach SESSION_ID [flags]
+```
+
+Use a session id from [`sessions ls`](#sessions-ls).
+
+When the stored status is **`running`** or another non-terminal state and the background driver is active, attach **subscribes** to live events (text deltas, tools, approvals) and replays persisted history. **Ctrl+C detaches**; the session keeps running.
+
+When the stored status is **`awaiting_input`**, the CLI resumes the interactive prompt so you can send further turns (unless input is blocked by a run limit).
+
+When the status is **`awaiting_approval`**, attach replays history and shows the pending approval on the stream. Decide with [`phrony approvals`](/docs/runtime/cli/approvals) in another terminal (or `tool_approval` on the stream if your client supports it).
+
+When the status is **`completed`** or **`failed`**, attach is read-only: you cannot send new messages. With **`--no-tui`**, the CLI prints history and the stored result, then exits. With the default TUI, the transcript stays on screen so you can scroll and review; press **Ctrl+C** to quit.
+
+### Flags
+
+| Flag | Description |
+|------|-------------|
+| `--no-tui` | Disable interactive terminal UI (plain stream output) |
+
+### Example
+
+```bash
+phrony sessions attach run_abc123
+```
+
+---
+
+## `sessions cancel`
+
+Cancel an in-progress session.
+
+```bash
+phrony sessions cancel SESSION_ID
+```
+
+Sets status to **`cancelled`** and stops the background driver (and any attached views stop receiving new events).
+
+### Example
+
+```bash
+phrony sessions cancel run_abc123
+```
+
+<UpNext>
+  <Card title="approvals" href="/docs/runtime/cli/approvals">
+    Approve or reject while a session is awaiting_approval.
+  </Card>
+  <Card title="Human-in-the-loop" href="/docs/runtime/hitl">
+    Policy semantics, timeouts, and the gRPC API.
+  </Card>
+</UpNext>

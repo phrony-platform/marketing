@@ -1,0 +1,335 @@
+@import 'tailwindcss';
+
+@source "../**/*.{js,ts,jsx,tsx,mdx}";
+
+/* Cockpit-aligned tokens so marketing can mirror dashboard UI (Session & runs, traces). */
+:root {
+  --font-sans: var(--font-geist-sans, ui-sans-serif, system-ui, sans-serif);
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.985 0 0);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --radius: 0.625rem;
+}
+
+/* Dark mode (aligned with Cockpit `globals.css`). */
+.dark {
+  color-scheme: dark;
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --destructive-foreground: oklch(0.985 0 0);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+@layer base {
+  a[href],
+  a:any-link {
+    cursor: pointer;
+  }
+
+  :where(
+    button:not(:disabled),
+    [role='button']:not([aria-disabled='true']),
+    [role='tab'],
+    summary,
+    label:has(input[type='checkbox']:not(:disabled)),
+    label:has(input[type='radio']:not(:disabled))
+  ) {
+    cursor: pointer;
+  }
+
+  :where(button:disabled, [aria-disabled='true']) {
+    cursor: not-allowed;
+  }
+}
+
+/* Thin, minimal scrollbar for marketing panels (Firefox + WebKit). */
+.scroll-compact {
+  scrollbar-width: thin;
+  scrollbar-color: oklch(0.72 0 0 / 0.4) transparent;
+}
+
+.scroll-compact::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+.scroll-compact::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scroll-compact::-webkit-scrollbar-thumb {
+  border-radius: 9999px;
+  background: oklch(0.72 0 0 / 0.35);
+}
+
+.scroll-compact::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.55 0 0 / 0.45);
+}
+
+.dark .scroll-compact {
+  scrollbar-color: oklch(0.65 0 0 / 0.35) transparent;
+}
+
+.dark .scroll-compact::-webkit-scrollbar-thumb {
+  background: oklch(0.55 0 0 / 0.4);
+}
+
+.dark .scroll-compact::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.7 0 0 / 0.45);
+}
+
+/* Hero product preview shell — black / gray mesh (see `.dark` override; root uses `dark`). */
+.hero-preview-mesh {
+  background-color: #000000;
+  background-image:
+    radial-gradient(ellipse 125% 105% at 0% 0%, #000000 0%, transparent 64%),
+    radial-gradient(ellipse 120% 100% at 100% 0%, #171717 0%, transparent 60%),
+    radial-gradient(ellipse 125% 110% at 0% 100%, #050505 0%, transparent 64%),
+    radial-gradient(ellipse 110% 100% at 100% 100%, #0f0f0f 0%, transparent 58%),
+    radial-gradient(ellipse 90% 78% at 50% 44%, rgb(20 20 20 / 0.22) 0%, transparent 68%),
+    linear-gradient(145deg, #080808 0%, #141414 38%, #020202 62%, #000000 100%);
+}
+
+.dark .hero-preview-mesh {
+  background-color: #000000;
+  background-image:
+    radial-gradient(ellipse 125% 105% at 0% 0%, #000000 0%, transparent 64%),
+    radial-gradient(ellipse 120% 100% at 100% 0%, #141416 0%, transparent 56%),
+    radial-gradient(ellipse 125% 110% at 0% 100%, #030303 0%, transparent 64%),
+    radial-gradient(ellipse 110% 100% at 100% 100%, #0c0c0e 0%, transparent 58%),
+    radial-gradient(ellipse 90% 78% at 50% 44%, rgb(15 15 18 / 0.18) 0%, transparent 68%),
+    linear-gradient(145deg, #020202 0%, #121214 40%, #000000 62%, #000000 100%);
+}
+
+/* sugar-high — GitHub-dark–style on zinc panel (marketing + embedded SDK) */
+.marketing-sugar-high,
+.embedded-sdk-sugar-high {
+  --sh-class: #79c0ff;
+  --sh-identifier: #c9d1d9;
+  --sh-sign: #8b949e;
+  --sh-property: #79c0ff;
+  --sh-entity: #7ee787;
+  --sh-jsxliterals: #a5d6ff;
+  --sh-string: #a5d6ff;
+  --sh-keyword: #ff7b72;
+  --sh-comment: #8b949e;
+}
+
+/* docs file/code samples — semantic tokens (YAML, TS, JSON) */
+.docs-code-highlight {
+  color: #c9d1d9;
+  --sh-class: #79c0ff;
+  --sh-identifier: #c9d1d9;
+  --sh-sign: #8b949e;
+  --sh-property: #79c0ff;
+  --sh-entity: #7ee787;
+  --sh-jsxliterals: #a5d6ff;
+  --sh-string: #a5d6ff;
+  --sh-keyword: #ff7b72;
+  --sh-comment: #8b949e;
+}
+
+/* docs terminal/bash — warm amber on zinc panel */
+.docs-terminal {
+  color: #f0e0b8;
+  --sh-class: #ffd866;
+  --sh-identifier: #f0e0b8;
+  --sh-sign: #c9a227;
+  --sh-property: #ffe9a8;
+  --sh-entity: #c8e6a0;
+  --sh-jsxliterals: #ffe9a8;
+  --sh-string: #ffe9a8;
+  --sh-keyword: #ffb454;
+  --sh-comment: #9a8b5a;
+}
+
+.docs-terminal .sh__token--entity {
+  margin-inline-start: 0.35ch;
+}
+
+/* Hero — animated gradient ring + title shimmer for paradigm CTA */
+@keyframes hero-paradigm-border-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes hero-paradigm-title-shimmer {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+.hero-paradigm-border {
+  overflow: hidden;
+}
+
+.hero-paradigm-border::before {
+  content: '';
+  position: absolute;
+  inset: -120%;
+  background: conic-gradient(
+    from 0deg,
+    oklch(0.55 0 0 / 0.15),
+    oklch(0.92 0 0 / 0.55),
+    oklch(0.35 0 0 / 0.35),
+    oklch(0.78 0 0 / 0.45),
+    oklch(0.55 0 0 / 0.15)
+  );
+  animation: hero-paradigm-border-spin 10s linear infinite;
+}
+
+.dark .hero-paradigm-border::before {
+  background: conic-gradient(
+    from 0deg,
+    oklch(0.45 0 0 / 0.2),
+    oklch(0.95 0 0 / 0.65),
+    oklch(0.55 0 0 / 0.35),
+    oklch(0.88 0 0 / 0.5),
+    oklch(0.45 0 0 / 0.2)
+  );
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-paradigm-border::before {
+    animation: none;
+    inset: 0;
+    background: linear-gradient(
+      135deg,
+      oklch(0.75 0 0 / 0.45),
+      oklch(0.45 0 0 / 0.55),
+      oklch(0.82 0 0 / 0.4)
+    );
+  }
+
+  .dark .hero-paradigm-border::before {
+    background: linear-gradient(
+      135deg,
+      oklch(0.65 0 0 / 0.5),
+      oklch(0.92 0 0 / 0.55),
+      oklch(0.5 0 0 / 0.45)
+    );
+  }
+}
+
+.hero-paradigm-title {
+  background-image: linear-gradient(
+    105deg,
+    var(--foreground) 0%,
+    oklch(0.55 0 0) 42%,
+    var(--foreground) 72%,
+    oklch(0.72 0 0) 100%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: hero-paradigm-title-shimmer 7s ease-in-out infinite;
+}
+
+.dark .hero-paradigm-title {
+  background-image: linear-gradient(
+    105deg,
+    var(--foreground) 0%,
+    oklch(0.78 0 0) 40%,
+    var(--foreground) 70%,
+    oklch(0.55 0 0) 100%
+  );
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-paradigm-title {
+    animation: none;
+    background-size: auto;
+    color: var(--foreground);
+    -webkit-background-clip: unset;
+    background-clip: unset;
+  }
+}

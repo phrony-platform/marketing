@@ -1,0 +1,37 @@
+---
+title: "history"
+description: "List deployment activation history for an agent."
+---
+
+## Synopsis
+
+```bash
+phrony history AGENT
+```
+
+## Description
+
+Lists append-only **deployment** records for an agent: each activate (`deploy`) or [`rollback`](/docs/runtime/cli/rollback), with version label, action, actor, and timestamp.
+
+`AGENT` is `namespace/name`.
+
+## Example
+
+```bash
+phrony history demo/echo-agent
+```
+
+## Output
+
+Table columns: `VERSION`, `ACTION`, `ACTOR`, `CREATED_AT`.
+
+The active version is the most recent row.
+
+<UpNext>
+  <Card title="active" href="/docs/runtime/cli/active">
+    Current active version only.
+  </Card>
+  <Card title="rollback" href="/docs/runtime/cli/rollback">
+    Revert activation to a prior version.
+  </Card>
+</UpNext>

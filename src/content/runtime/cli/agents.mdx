@@ -1,0 +1,80 @@
+---
+title: "agents"
+description: "List and archive agents."
+---
+
+## Synopsis
+
+```bash
+phrony agents <subcommand> [args] [flags]
+```
+
+## Description
+
+List agents registered in the runtime and archive agents (deprecating all versions). Version listing, deprecate, and retire are top-level commands: [`versions`](/docs/runtime/cli/versions), [`deprecate`](/docs/runtime/cli/deprecate), [`retire`](/docs/runtime/cli/retire).
+
+All subcommands require a running runtime.
+
+---
+
+## `agents ls`
+
+List agents.
+
+```bash
+phrony agents ls [flags]
+```
+
+### Flags
+
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--namespace` | `-n` | Filter by namespace |
+
+### Example
+
+```bash
+phrony agents ls
+phrony agents ls -n demo
+```
+
+### Output
+
+Table columns: `ID`, `NAMESPACE`, `NAME`, `OWNER`, `STATUS` (`active` or `archived`).
+
+---
+
+## `agents archive`
+
+Archive an agent and deprecate **all** of its versions.
+
+```bash
+phrony agents archive AGENT
+```
+
+`AGENT` is `namespace/name`.
+
+### Example
+
+```bash
+phrony agents archive demo/echo-agent
+```
+
+### Output
+
+```text
+archived agent demo/echo-agent (all versions deprecated)
+```
+
+Archived agents cannot be deployed or run.
+
+---
+
+<UpNext>
+  <Card title="publish" href="/docs/runtime/cli/publish">
+    Register new versions.
+  </Card>
+  <Card title="versions" href="/docs/runtime/cli/versions">
+    List versions for one agent.
+  </Card>
+</UpNext>

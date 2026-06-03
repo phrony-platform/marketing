@@ -1,0 +1,125 @@
+---
+title: "Tool integrity"
+description: "Deployment allowlist checks before the runtime dispatches a tool call to a worker."
+---
+
+## What integrity enforces
+
+<Note>
+  **The question integrity answers: "Is this worker actually allowed to run this tool?"** Any process can connect and claim it handles `send-alert`. Before trusting it, the runtime can check the worker against an **allowlist** — a pre-approved list of *which* identities and *which* exact builds may fulfill each sensitive tool. It's the bouncer checking a guest list before letting someone behind the bar.
+</Note>
+
+A couple of terms in this section:
+
+- **Workload identity** — a verifiable name for the running process (for example a [SPIFFE](https://spiffe.io) ID like `spiffe://prod/weather-worker`, or an mTLS certificate subject). It answers "who is this worker?" in a way that can't just be typed in.
+- **Image digest** — a cryptographic fingerprint (`sha256:…`) of the exact container image the worker is running. It answers "is this the precise build we approved?" Any change to the code produces a different digest.
+
+Before the runtime sends an **`invoke`** to a worker, it can verify that the worker is approved for **`(agent, tool, version)`**:
+
+| Check | Enforced at dispatch | Recorded for audit |
+|-------|----------------------|-------------------|
+| **Workload identity** | Yes — must match allowlist | Yes |
+| **Image digest** | Yes — must be an approved digest | Yes |
+| **Contract version** | Yes — when the allowlist entry sets `contract_version` | Yes |
+| **Descriptor hash** | No — recorded on registration, not used as the gate | Yes |
+
+Mismatch returns a distinct **integrity violation** (not a generic dispatch failure). The invocation ledger stores `worker_identity`, `image_digest`, `descriptor_hash`, and manifest hash for traceability. Full SLSA/in-toto verification is deferred; the runtime records provenance fields now for later policy.
+
+When no allowlist is configured, all registered workers pass integrity checks.
+
+### Concept example
+
+Manifest allows `weather/weather-assistant` to call `weather.send-alert`. A worker connects claiming that tool:
+
+```yaml
+# allowlist entry
+agent: weather/weather-assistant
+tool: weather.send-alert
+workload_identities: [spiffe://prod/weather-worker]
+image_digests: [sha256:abc123...]
+```
+
+```text
+Worker registers with workload_identity=spiffe://prod/weather-worker, image_digest=sha256:abc123...
+→ match → dispatch proceeds
+
+Worker registers with image_digest=sha256:unknown
+→ integrity violation → call blocked (not dispatched)
+```
+
+## Allowlist file
+
+Point the runtime at a YAML document with **`RUNTIME_TOOL_ALLOWLIST`**:
+
+```bash
+export RUNTIME_TOOL_ALLOWLIST=/etc/phrony/tool-allowlist.yaml
+```
+
+Document shape:
+
+```yaml
+entries:
+  - agent: demo/weather-agent          # namespace/name
+    tool: weather.get-forecast           # manifest ref, not wire name
+    version: "1.0.0"                     # omit or use default for default version
+    contract_version: "1"              # optional; must match worker advertisement
+    workload_identities:
+      - spiffe://prod/weather-worker
+      - playground/local                # dev identity
+    image_digests:
+      - sha256:abc123...
+      - sha256:playground-dev           # dev digest
+```
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `agent` | Yes | Agent key `namespace/name` for the deployed manifest |
+| `tool` | Yes | Tool ref from `spec.tools[].ref` |
+| `version` | No | Contract version bound in the manifest; empty means `default` |
+| `contract_version` | No | When set, worker must advertise this version for `tool@version` |
+| `workload_identities` | No | Allowed `workload_identity` values from worker `register` |
+| `image_digests` | No | Allowed `image_digest` values from worker `register` |
+
+Duplicate `(agent, tool, version)` keys are rejected at load time.
+
+## Worker registration fields
+
+Workers send integrity-related fields in **`WorkRegister`**:
+
+```yaml
+# Conceptual mapping — see gRPC protos in the runtime repo
+worker_id: playground-worker-1
+workload_identity: spiffe://prod/weather-worker
+image_digest: sha256:abc123...
+handlers:
+  - tool: weather.get-forecast
+    version: "1.0.0"
+    contract_version: "1"
+    descriptor_hash: sha256:...   # audit only
+    max_concurrency: 4
+```
+
+The allowlist **`tool`** and **`version`** must match the manifest binding and the handler advertisement. The **`agent`** key is the manifest `metadata.namespace` / `metadata.name`.
+
+## Violation types
+
+| Violation | When |
+|-----------|------|
+| `workload_identity` | Agent not on allowlist, identity not listed, or missing worker info |
+| `image_digest` | Digest not in `image_digests` |
+| `contract_version` | Advertised contract version does not match the entry |
+
+Operators should treat integrity failures as **configuration or deployment drift**, not as model or handler logic errors.
+
+## Side effects and recovery
+
+Integrity is separate from **side-effect class** (`read_only`, `idempotent_write`, `non_idempotent_write`, `irreversible_action`). Side-effect class controls whether the runtime may **redispatch** the same `call_id` after an indeterminate outcome. See [Durability and recovery](/docs/runtime/tool-durability).
+
+<UpNext>
+  <Card title="Application workers" href="/docs/runtime/tool-workers">
+    Work stream registration and handler lifecycle.
+  </Card>
+  <Card title="Tool bindings" href="/docs/agent-spec/resources/tools">
+    Manifest side_effect_class and version pins.
+  </Card>
+</UpNext>

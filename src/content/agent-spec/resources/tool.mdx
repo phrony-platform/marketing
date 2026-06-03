@@ -1,0 +1,201 @@
+---
+title: "Tool"
+description: "The kind Tool document—tool contract, schemas, side-effect class, and default policies without implementation endpoints."
+---
+
+## What is a Tool?
+
+<Note>
+  **Contract, not code.** A Tool document is the *job description* for a capability — "this tool takes these inputs, returns this output, and has these risks." It deliberately leaves out *how* and *where* the tool actually runs. That implementation lives in your application code (a "worker"), so the same contract can be fulfilled by different code in dev, staging, and production without changing the agent.
+</Note>
+
+A **Tool** document declares the **contract** for one callable capability: argument and result schemas, mutability class, and optional default policies. It does **not** declare where the tool runs or which credentials it uses—that lives in your worker processes and runtime installation config. At run time, **workers** connect to the runtime over the **`Work`** gRPC stream and register handlers for each `tool@version` binding.
+
+Conformant runtimes use the **pull model**: instead of the manifest listing a URL to call, the code that implements a tool (a **worker**) connects *to* the runtime and announces "I can handle this tool." The runtime then hands authorized calls to whoever registered. Because nothing in the manifest hard-codes an address, tool identity is **attested at execution** (verified live when the call happens) rather than trusted from a URL written months ago.
+
+### Concept examples
+
+**Contract only** (in the manifest — no URL, no API key):
+
+```yaml
+kind: Tool
+metadata:
+  name: get-forecast
+  namespace: weather
+spec:
+  description: Return the forecast for a city.
+  input_schema:
+    inline:
+      type: object
+      properties:
+        city: { type: string }
+```
+
+**Pull model** (worker registers; runtime dispatches when the model calls the tool):
+
+```text
+Worker → register("weather.get-forecast@1.0.0")
+Model  → tool_call(name: get_forecast, args: { city: "Oslo" })
+Runtime → invoke registered worker → tool_result → model
+```
+
+**Side-effect class** (what recovery is allowed after a crash):
+
+```yaml
+side_effect_class: read_only              # safe to retry
+side_effect_class: non_idempotent_write   # never silently run twice
+```
+
+## Minimal example
+
+```yaml
+apiVersion: phrony.com/v1
+kind: Tool
+
+metadata:
+  name: send-alert
+  namespace: weather
+  version: 1.0.0
+  governance:
+    risk_tier: high
+    classifications:
+      - weather.high-impact-external
+  labels:
+    owning-team: weather-platform
+
+spec:
+  description: Send a public weather alert for a region.
+  side_effect_class: non_idempotent_write
+  input_schema:
+    ref: schemas/alert-input
+  output_schema:
+    inline:
+      type: object
+      properties:
+        alert_id: { type: string }
+        status: { type: string, enum: [sent, rejected] }
+      required: [alert_id, status]
+      additionalProperties: false
+  default_policies:
+    - weather.high-severity-alert-boundary
+  available_when:
+    - agent.capability: weather-alerts
+```
+
+Place Tool documents under `tools/` in the Agent bundle, or reference them from a governed catalog at publish time. See [Conventions](/docs/agent-spec/conventions#bundle-layout) and [Tool bindings](/docs/agent-spec/resources/tools).
+
+## Bundle file
+
+```
+weather-assistant/
+  agent.yaml
+  tools/
+    send-alert.yaml    # kind: Tool
+  schemas/
+    alert-input.json
+```
+
+The publish pipeline resolves `input_schema.ref` and `output_schema.ref` the same way as Agent `output.schema.ref`: bundle-relative paths with the schema search order in [Conventions](/docs/agent-spec/conventions#ref-resolution).
+
+## Field reference
+
+### Top-level
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `apiVersion` | string | Yes | Must be `phrony.com/v1` |
+| `kind` | string | Yes | Must be `Tool` |
+| `metadata` | object | Yes | Identity, governance, labels |
+| `spec` | object | Yes | Contract fields |
+
+### metadata
+
+Tool supports the same metadata tiers as Agent. Only `metadata.governance.authority_boundaries` are **enforced** (compiled to policies at publish); other governance fields are **descriptive** and recorded in evidence. See [Conventions](/docs/agent-spec/conventions#shared-metadata).
+
+| Field | On Tool | Notes |
+|-------|---------|-------|
+| `name`, `namespace`, `version` | Required | Semver in `version`; catalog logical id is `namespace.name` |
+| `governance` | Optional | Subset commonly used: `risk_tier`, `classifications` |
+| `labels`, `annotations` | Optional | Descriptive only |
+
+### spec
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `description` | string | No | Human- and model-facing summary |
+| `side_effect_class` | string | No | Mutability for dispatch and recovery (see below) |
+| `input_schema` | object | No | JSON Schema for arguments (`ref` or `inline`; mutually exclusive) |
+| `output_schema` | object | No | JSON Schema for tool results |
+| `default_policies` | string[] | No | Logical refs to [Policy](/docs/agent-spec/resources/policy) documents |
+| `available_when` | string[] | No | Declarative availability predicates (enforced when evaluated) |
+| `strict` | boolean | No | When `true`, arguments must validate strictly against `input_schema` |
+| `on_failure` | string | No | Tool-level failure handling hint for the runtime |
+| `terminal` | boolean | No | When `true`, a successful call may end the agent loop |
+
+#### input_schema and output_schema
+
+Exactly one of `ref` (+ optional `version`) or `inline` per schema object.
+
+```yaml
+input_schema:
+  ref: schemas/alert-input
+  version: 2
+```
+
+Bindings use **`input_schema`** (same shape as on Tool documents).
+
+#### side_effect_class
+
+The **side-effect class** answers one question: *if we're not sure whether this call actually ran, is it safe to run it again?* That matters after a crash or timeout. Reading data is safe to retry; charging a credit card is not. Declaring this lets the runtime recover safely instead of guessing. ("Idempotent" just means running it twice has the same effect as running it once.)
+
+| Value | Meaning |
+|-------|---------|
+| `read_only` | No durable side effects; safe to redispatch after indeterminate failure |
+| `idempotent_write` | Writes safely retried with the same `call_id` |
+| `non_idempotent_write` | At-most-once unless the handler proves idempotency |
+| `irreversible_action` | Cannot be safely repeated; indeterminate outcomes require human review |
+
+Bindings may **narrow** `side_effect_class` but must not **widen** it relative to the Tool document at deploy.
+
+### Deliberately absent from Tool
+
+The portable Tool kind does **not** include:
+
+- Endpoints, URLs, or connection strings
+- Credentials or secret references
+- `execute` hooks or other SDK closures
+- Implementation hashes or worker binary ids
+
+Those stay in application code and installation configuration.
+
+## Catalog identity and versioning
+
+Tools are referenced from an Agent binding by **logical ref**:
+
+```yaml
+ref: weather.send-alert@^1.0
+```
+
+- **`namespace.name`** matches `metadata.namespace` and `metadata.name`.
+- **`@version`** is a semver constraint; publish **pins** one concrete contract version in the resolved snapshot.
+- Deploy may **narrow** schemas or policies but never **widen** beyond the pinned Tool version.
+
+## Policy resolution
+
+Policies attached to a tool call come from, in merge order ( **deny wins** / most restrictive ):
+
+1. Tool `default_policies`
+2. Agent binding `policies`
+3. Agent-wide policies
+4. Policies compiled from `metadata.governance.authority_boundaries` on Agent or Tool
+
+See [Policy](/docs/agent-spec/resources/policy) and [Tool bindings](/docs/agent-spec/resources/tools).
+
+<UpNext>
+  <Card title="Tool bindings" href="/docs/agent-spec/resources/tools">
+    How an Agent references Tools—logical refs, schema overrides, and policies.
+  </Card>
+  <Card title="Policy" href="/docs/agent-spec/resources/policy">
+    Conditions, portable decisions, approval, and authority_ref.
+  </Card>
+</UpNext>

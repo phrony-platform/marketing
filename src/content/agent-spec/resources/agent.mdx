@@ -1,0 +1,383 @@
+---
+title: "Agent definition"
+description: "The Agent definition—identity, behavior envelope, limits, and output contract."
+---
+
+## What is an Agent?
+
+<Note>
+  **In one sentence:** the Agent document is the recipe card for a single agent. It says who the agent is, how it should behave, the limits it must stay inside, and what shape its answer should take. It does *not* contain the tool code, the secrets, or the wiring — those live elsewhere so the recipe stays portable.
+</Note>
+
+An **Agent** is the declarative definition of one runnable agent. It has three parts—the same three questions you would ask about any worker in production:
+
+<AgentPartsIllustration />
+
+Tool contracts, policies, and bindings are separate kinds—see [Tool](/docs/agent-spec/resources/tool), [Policy](/docs/agent-spec/resources/policy), and [Tool bindings](/docs/agent-spec/resources/tools). How tool implementations connect to the runtime is not a manifest kind; see [Application workers](/docs/runtime/tool-workers).
+
+When published, the Agent is represented as a **resolved snapshot**: every `ref` (to a prompt, a schema, a tool) is followed and its content is pasted inline, then frozen. The runtime keeps that frozen copy, so the agent runs identically even if the original files on your laptop change later. `spec.limits` and `output` declare run-wide caps and response validation. For how agents fit the broader paradigm, see [The paradigm](/docs/paradigm/the-paradigm).
+
+### Concept examples
+
+**Identity (`metadata`)** — who this agent is:
+
+```yaml
+metadata:
+  name: weather-assistant
+  namespace: weather
+  version: 2.4.0
+```
+
+**Behavior envelope (`spec`)** — what it does and its caps:
+
+```yaml
+spec:
+  instructions:
+    ref: prompts/weather-assistant
+  model:
+    provider: anthropic
+    name: claude-sonnet-4-5
+  limits:
+    max_loop_iterations: 8
+```
+
+**Output contract (`output`)** — shape of the final answer:
+
+```yaml
+output:
+  format: json
+  schema:
+    ref: schemas/forecast-result
+  strict: true
+```
+
+**Resolved snapshot** — before publish you write `ref:`; after publish the runtime stores inlined content:
+
+```yaml
+# Authoring (ref)
+spec:
+  instructions:
+    ref: prompts/weather-assistant
+
+# Stored snapshot (inlined)
+spec:
+  instructions:
+    text: |
+      You are a weather assistant...
+```
+
+<Tip>
+  Skim the [minimal example](#minimal-example) first to see the shape, then read the [full reference example](#full-reference-example) — its inline comments walk through every field in context. The field tables further down are for when you need exact rules.
+</Tip>
+
+## Minimal example
+
+```yaml
+apiVersion: phrony.com/v1
+kind: Agent
+
+metadata:
+  name: weather-assistant
+  namespace: weather
+  version: 2.4.0
+
+secrets:
+  anthropic:
+    fromEnv: ANTHROPIC_API_KEY
+
+spec:
+  purpose: Answer weather questions and call forecast tools.
+  instructions:
+    ref: prompts/weather-assistant
+  model:
+    provider: anthropic
+    name: claude-sonnet-4-5
+    parameters:
+      temperature: 0.2
+      max_output_tokens: 2000
+  limits:
+    max_tokens_per_run: 20000
+    max_loop_iterations: 8
+    max_wall_clock_seconds: 60
+    on_limit: halt
+
+output:
+  format: json
+  schema:
+    ref: schemas/forecast-result
+  strict: true
+  on_invalid: retry
+```
+
+See [Full reference example](#full-reference-example) for the canonical weather-assistant document with comments and optional fields. For bundle layout and ref rules, see [Conventions](/docs/agent-spec/conventions).
+
+## Full reference example
+
+Canonical sample: weather assistant with forecast and alert tools.
+
+```yaml
+apiVersion: phrony.com/v1
+kind: Agent
+
+metadata:
+  name: weather-assistant
+  namespace: weather             # addressability + multi-tenancy
+  version: 2.4.0                 # semver release label
+  owner: weather-platform-team
+  governance:                    # descriptive + enforced boundaries (see Conventions)
+    risk_tier: high
+    authority_boundaries:
+      - weather.alert-authority
+    classifications:
+      - weather.high-impact-external
+    frameworks:
+      eu-ai-act/v1:
+        role: provider
+        annex_iii_category: credit-scoring
+  labels:                        # for fleet filtering/monitoring
+    domain: weather
+    tier: production
+  annotations:
+    cost-center: "CC-4471"
+
+# Credential references only — never commit API key values.
+secrets:
+  anthropic:
+    fromEnv: ANTHROPIC_API_KEY
+
+spec:
+  purpose: >
+    Help users get weather forecasts and send public alerts when needed.
+    Read-only forecast lookups are routine; high-severity alerts require
+    human approval per policy.
+
+  # System prompt. Use ONE of: ref (governed/shared) or inline text.
+  instructions:
+    ref: prompts/weather-assistant
+    version: 5
+    # text: |
+    #   You are a weather assistant...
+
+  model:
+    provider: anthropic
+    name: claude-sonnet-4-5
+    secret: anthropic            # optional when a secret named after provider exists
+    parameters:                  # passed through to the provider, per call
+      temperature: 0.2
+      max_output_tokens: 2000    # caps ONE response
+      top_p: null                # set temperature OR top_p, not both
+      stop_sequences: []
+    reasoning:
+      effort: low                # low | medium | high (mapped per provider)
+    provider_options: {}         # typed escape hatch for provider-specific params
+
+  tools:                         # bindings — see Tool bindings chapter
+    - ref: weather.get-forecast@^1.0
+      as: get_forecast
+    - ref: weather.send-alert@^1.0
+      as: send_alert
+      policies:
+        - weather.high-severity-alert-boundary
+
+  limits:                        # enforced across the run, not per completion
+    max_tokens_per_run: 20000    # cumulative in + out, all steps
+    max_loop_iterations: 8       # tool-calling steps before forced stop
+    max_wall_clock_seconds: 60
+    max_hitl_wait_minutes: 240   # separate from wall clock — approval wait budget
+    on_limit: halt               # halt | escalate (escalate → Policy with limit:escalate)
+
+output:
+    format: json                 # text (default) | json
+    schema:
+      ref: schemas/forecast-result # OR inline below
+      version: 3
+      # inline:
+      #   type: object
+      #   properties:
+      #     summary: { type: string }
+      #     conditions: { type: string }
+      #     high_c: { type: number }
+      #     low_c: { type: number }
+      #   required: [summary, conditions]
+      #   additionalProperties: false
+    strict: true                 # validate output against schema
+    on_invalid: retry            # retry | repair | escalate | fail
+```
+
+## Field reference
+
+### Top-level
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `apiVersion` | string | Yes | Must be `phrony.com/v1` (see [Conventions](/docs/agent-spec/conventions)) |
+| `kind` | string | Yes | Must be `Agent` |
+| `metadata` | object | Yes | Identity and versioning |
+| `secrets` | map[string]object | No | Credential references; see [Secrets](/docs/agent-spec/resources/secrets) |
+| `spec` | object | Yes | Purpose, instructions, model, limits |
+| `output` | object | No | Final response shape and validation |
+
+`secrets` and `output` are **top-level siblings** of `spec`, not nested under `spec`.
+
+## Secrets
+
+Agents that call a model provider should declare a top-level **`secrets`** map: credential **references only** (v1: `fromEnv`), never API key values in git. Link the model with `spec.model.secret`, or omit it when the secret name matches `spec.model.provider`.
+
+```yaml
+secrets:
+  anthropic:
+    fromEnv: ANTHROPIC_API_KEY
+```
+
+For field rules, publish and run lifecycle, encryption, rotation, and security guidance, see **[Secrets](/docs/agent-spec/resources/secrets)**.
+
+### metadata
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `name` | string | Yes | — | Agent name; unique with `namespace` |
+| `namespace` | string | Yes | — | Addressability and multi-tenancy boundary |
+| `version` | string | Yes | — | Semver label for humans and CI |
+| `owner` | string | No | — | Owning team or contact (descriptive; prefer `labels` for new manifests) |
+| `governance` | object | No | — | Risk, authority boundaries, classifications, framework packs; see [Conventions](/docs/agent-spec/conventions#shared-metadata) |
+| `labels` | map[string]string | No | `{}` | Fleet filtering and monitoring (descriptive) |
+| `annotations` | map[string]string | No | `{}` | Arbitrary descriptive metadata (cost center, ticket id, …) |
+
+### spec.purpose
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `purpose` | string | Yes | Human-readable intent; not executed as a prompt |
+
+### spec.instructions
+
+Exactly one of `ref` or `text`.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `ref` | string | One of | Bundle-relative path to prompt content |
+| `version` | string \| number | No | Governed revision when using `ref` |
+| `text` | string | One of | Inline system prompt |
+
+<Warning>
+  Do not set both `ref` and `text`. Deploy and validation must reject the document.
+</Warning>
+
+### spec.model
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `provider` | string | Yes | Model provider id (for example `anthropic`, `openai`) |
+| `name` | string | Yes | Model id for that provider |
+| `secret` | string | No | Key in `secrets` for the provider API key; see [Secrets](/docs/agent-spec/resources/secrets) |
+| `parameters` | object | No | Pass-through to the provider **per completion** |
+| `reasoning` | object | No | Provider-mapped reasoning controls |
+| `provider_options` | object | No | Escape hatch for provider-specific options |
+
+#### spec.model.parameters
+
+Common keys (provider-specific; not all providers accept every key):
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `temperature` | number | Sampling temperature |
+| `top_p` | number | Nucleus sampling; **mutually exclusive with `temperature`** |
+| `max_output_tokens` | integer | Cap on tokens for **one** model response |
+| `stop_sequences` | string[] | Stop sequences for the provider |
+
+<Note>
+  `max_output_tokens` limits a single completion. Run-wide token caps belong in `spec.limits.max_tokens_per_run`.
+</Note>
+
+<Warning>
+  Set **`temperature` or `top_p`**, not both. Conformant tooling should reject documents that set both to non-null values.
+</Warning>
+
+#### spec.model.reasoning
+
+| Field | Type | Required | Values | Description |
+|-------|------|----------|--------|-------------|
+| `effort` | string | No | `low`, `medium`, `high` | Reasoning effort; mapped per provider |
+
+### spec.limits
+
+Apply across the **entire run** (all steps and completions), not per individual completion.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `max_tokens_per_run` | integer | No | Cumulative input + output tokens for the run |
+| `max_loop_iterations` | integer | No | Tool-calling loop steps before forced stop |
+| `max_wall_clock_seconds` | integer | No | Wall-clock budget for the run (includes tool wait time) |
+| `max_hitl_wait_minutes` | integer | No | Separate budget for approval waits; distinct from `max_wall_clock_seconds` |
+| `on_limit` | string | No | `halt` (default) or `escalate` when a limit is hit |
+
+`escalate` routes limit breaches to a [Policy](/docs/agent-spec/resources/policy) with `decision.type: escalate` or `require_approval` that matches `phrony.dispatch.trigger: limit:escalate` (for example via `default_policies`).
+
+### spec.tools and policies
+
+Tool **bindings** and policy references live on the Agent; rules are authored as `kind: Policy` documents and compiled at publish. The runtime enforces them on every tool call.
+
+| Topic | Chapter |
+|-------|---------|
+| `spec.tools` bindings | [Tool bindings](/docs/agent-spec/resources/tools) |
+| `spec.mcp_servers` | [MCP servers](/docs/agent-spec/resources/mcp-servers) |
+| `kind: Tool` contracts | [Tool](/docs/agent-spec/resources/tool) |
+| `kind: Policy` decisions | [Policy](/docs/agent-spec/resources/policy) |
+| Worker transport | [Application workers](/docs/runtime/tool-workers) (not a manifest kind) |
+| MCP transport | [MCP tool dispatch](/docs/runtime/mcp-tools) (not a manifest kind) |
+
+### output
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `format` | string | No | `text` | `text` or `json` |
+| `schema` | object | No | — | JSON Schema for structured output |
+| `strict` | boolean | No | `false` | When `true`, model output must validate against `schema` |
+| `on_invalid` | string | No | `fail` | Policy when validation fails |
+
+#### output.schema
+
+Exactly one of `ref` or `inline`.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `ref` | string | One of | Bundle-relative path to a JSON Schema file |
+| `version` | string \| number | No | Schema revision when using `ref` |
+| `inline` | object | One of | JSON Schema object embedded in the Agent |
+
+#### output.on_invalid
+
+| Value | Behavior |
+|-------|----------|
+| `retry` | Retry the model step within run limits |
+| `repair` | Attempt to repair output to match schema |
+| `escalate` | Escalate to human review (HITL chapter) |
+| `fail` | End the run with a validation failure |
+
+## Bundle layout
+
+Example directory tree for the weather-assistant Agent:
+
+```
+weather-assistant/
+  agent.yaml
+  tools/
+    get-forecast.yaml
+    send-alert.yaml
+  policies/
+    high-severity-alert-boundary.yaml
+  prompts/
+    weather-assistant.yaml
+  schemas/
+    forecast-result.json
+    alert-input.json
+```
+
+<UpNext>
+  <Card title="Conventions" href="/docs/agent-spec/conventions">
+    Ref paths, bundle layout, publish, deploy, and semver rules.
+  </Card>
+  <Card title="Secrets" href="/docs/agent-spec/resources/secrets">
+    Provider credentials, fromEnv references, and run-time resolution.
+  </Card>
+</UpNext>

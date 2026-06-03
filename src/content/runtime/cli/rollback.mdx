@@ -1,0 +1,55 @@
+---
+title: "rollback"
+description: "Roll back the active deployment for an agent."
+---
+
+## Synopsis
+
+```bash
+phrony rollback AGENT [flags]
+```
+
+## Description
+
+Appends a deployment record that activates a previous published version. By default, rolls back to the **second-most-recent distinct** active version. Use `--to` to pin a specific semver that was previously active.
+
+The target version must be published, not retired or deprecated, and the agent must not be archived.
+
+Records **`deployed_by`** from `PHRONY_ACTOR` (or the OS user when unset).
+
+`AGENT` is `namespace/name`.
+
+## Flags
+
+| Flag | Description |
+|------|-------------|
+| `--to` | Target version to activate (default: previous active version) |
+
+## Examples
+
+Rollback to the previous active version:
+
+```bash
+phrony rollback demo/echo-agent
+```
+
+Rollback to a specific version:
+
+```bash
+phrony rollback demo/echo-agent --to 1.1.0
+```
+
+On success:
+
+```text
+rolled back demo/echo-agent to 1.1.0 (was: 1.2.0)
+```
+
+<UpNext>
+  <Card title="history" href="/docs/runtime/cli/history">
+    Deployment activation log.
+  </Card>
+  <Card title="active" href="/docs/runtime/cli/active">
+    Verify which version is active after rollback.
+  </Card>
+</UpNext>

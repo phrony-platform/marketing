@@ -1,0 +1,41 @@
+---
+title: "deprecate"
+description: "Mark a published agent version as not runnable."
+---
+
+## Synopsis
+
+```bash
+phrony deprecate AGENT@VERSION
+```
+
+## Description
+
+<Note>
+  **Deprecate vs retire:** deprecate is the *soft, reversible* "please stop using this" — the version stays in the registry and can be brought back. [`retire`](/docs/runtime/cli/retire) is the *permanent* removal. Reach for deprecate first; retire when a version should be gone for good.
+</Note>
+
+Marks a single published version as deprecated. Deprecated versions cannot be activated with [`deploy`](/docs/runtime/cli/deploy) or used for new [`run`](/docs/runtime/cli/run) invocations while they remain deprecated.
+
+`AGENT@VERSION` is `namespace/name@semver`.
+
+## Example
+
+```bash
+phrony deprecate demo/echo-agent@1.0.0
+```
+
+On success:
+
+```text
+deprecated demo/echo-agent@1.0.0 (id: <version-id>)
+```
+
+<UpNext>
+  <Card title="retire" href="/docs/runtime/cli/retire">
+    Permanent version-level retire.
+  </Card>
+  <Card title="deploy" href="/docs/runtime/cli/deploy">
+    Activate a non-deprecated version.
+  </Card>
+</UpNext>

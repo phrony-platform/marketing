@@ -1,0 +1,92 @@
+---
+title: "Human-in-the-loop approvals"
+description: "Operator approval flows, gRPC APIs, and CLI commands for tool and limit escalations."
+---
+
+Phrony can pause a session when a policy requires human approval before a tool runs, when a run limit triggers `on_limit: escalate` with a matching policy, or when approval times out according to policy defaults.
+
+## Session statuses
+
+| Status | Meaning |
+|--------|---------|
+| `awaiting_approval` | A pending approval row exists; dispatch is blocked until an operator decides |
+| `awaiting_input` | Turn finished; the client may send the next user message (unless input is blocked by a limit) |
+
+Detached runs (`phrony run` without `--attach`) and interactive attach sessions both support **out-of-band** decisions: an operator can approve from another terminal without holding the interactive stream open.
+
+## Operator CLI
+
+Command reference: [`phrony approvals`](/docs/runtime/cli/approvals).
+
+```bash
+# List pending approvals (default filter: pending)
+phrony approvals list
+phrony approvals list --status pending --route supervisor --session-id run_abc
+
+# Inspect full context (tool, args, votes, expiry)
+phrony approvals show APPROVAL_ID
+
+# Approve or reject
+phrony approvals approve APPROVAL_ID --comment "verified region"
+phrony approvals approve APPROVAL_ID --args ./edited.json --comprehension
+phrony approvals reject APPROVAL_ID --comment "severity too high"
+```
+
+Set `PHRONY_ACTOR` (or pass `actor` on gRPC) so decisions are attributed in the audit trail.
+
+### Multi-approver and comprehension
+
+When policy sets `approvals_required: N`, each distinct actor must approve before dispatch proceeds. Partial quorum returns `status: pending` from `DecideApproval`.
+
+When `comprehension_required: true`, approve commands must pass `--comprehension` (or `comprehension_acknowledged: true` on the RPC).
+
+### Policy snapshots
+
+Each approval stores tool, args, route, `on_reject`, timeout metadata, and `policy_runtime` at request time so later manifest publishes do not change in-flight decisions.
+
+## gRPC API
+
+Unary methods on the runtime service:
+
+- `GetApproval` — one approval with votes
+- `ListApprovals` — filter by `status`, `route`, `session_id`, agent namespace/name
+- `DecideApproval` — `APPROVE` or `REJECT`, optional `args`, `comment`, `comprehension_acknowledged`, `actor`
+
+Interactive streams still emit `approval_required` and accept `tool_approval`; those messages delegate to the same coordinator as the unary API.
+
+## Timeouts and escalation
+
+Policy `timeout.after_minutes` with `timeout.default`:
+
+| Default | Behavior |
+|---------|----------|
+| `deny` | Reject as if an operator denied (respects `on_reject`) |
+| `allow` | Auto-approve (`decided_by: system:timeout`) |
+| `escalate` | Close the row as `escalated` and open a new pending approval (route from `decision.runtime.phrony.com/escalate_to_role` when set) |
+
+## Reject behavior
+
+| `on_reject` | Effect |
+|-------------|--------|
+| `return_to_agent` (default) | Inject a tool error result; session returns to `awaiting_input` |
+| `fail` | Mark the session `failed` with the operator comment |
+
+## Example: alert approval
+
+See the [tool worker playground](https://github.com/phrony-platform/tool-worker-playground): publish the agent, run with a high-severity alert, then in a second terminal:
+
+```bash
+phrony approvals list
+phrony approvals approve <approval-id>
+```
+
+The worker receives the invoke without sending `tool_approval` on the interactive stream.
+
+<UpNext>
+  <Card title="approvals" href="/docs/runtime/cli/approvals">
+    List, inspect, approve, and reject from the operator CLI.
+  </Card>
+  <Card title="Tool bindings" href="/docs/agent-spec/resources/tools">
+    Attach policies and HITL triggers on bindings.
+  </Card>
+</UpNext>

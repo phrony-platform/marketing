@@ -1,0 +1,60 @@
+---
+title: "publish"
+description: "Publish an agent manifest as an immutable version."
+---
+
+## Synopsis
+
+```bash
+phrony publish MANIFEST
+```
+
+## Description
+
+<Note>
+  **In plain terms:** publish takes a snapshot of your agent and locks it in. **Immutable** means it can never change after this — if you need an edit, you publish a new version. The runtime identifies each version by its `metadata.version` and by a **content hash** (a fingerprint of the exact bytes), so two publishes that differ even slightly are always distinguishable.
+</Note>
+
+Loads and resolves the manifest bundle locally, then sends the resolved snapshot to the runtime over gRPC. The runtime stores an **immutable** agent version keyed by content hash and `metadata.version`.
+
+Publishing does **not** make the version runnable. After publish, use [`deploy`](/docs/runtime/cli/deploy) to activate the version for [`run`](/docs/runtime/cli/run).
+
+`MANIFEST` is the path to the primary Agent YAML file.
+
+### Manifest secrets
+
+If the Agent declares a top-level [`secrets`](/docs/agent-spec/resources/secrets) section, publish stores **references only** in the resolved manifest (`fromEnv` names). Publish does **not** read environment variables or send secret values.
+
+Before running sessions for agents with secrets:
+
+1. Set **`RUNTIME_SECRETS_ENCRYPTION_KEY`** on the **runtime** (see [Environment variables](/docs/runtime#environment-variables)).
+2. At **run** time, supply the variables referenced in the manifest on the machine running `phrony run` (export in the shell, use `-e` / `--env-file`, or pass `resolved_secrets` from your backend)—see [`run`](/docs/runtime/cli/run) and [Secrets](/docs/agent-spec/resources/secrets).
+
+What gets stored at publish:
+
+| Store | Contents |
+|-------|----------|
+| `agent_versions.manifest` | Resolved manifest with **ref-only** `secrets` (no API key values) |
+
+The runtime records **`published_by`** from `PHRONY_ACTOR` (or the OS user when unset).
+
+## Example
+
+```bash
+phrony publish path/to/agent.yaml
+```
+
+On success, prints the agent reference and version:
+
+```text
+demo/echo-agent 1.0.0
+```
+
+<UpNext>
+  <Card title="validate" href="/docs/runtime/cli/validate">
+    Check the manifest before publish.
+  </Card>
+  <Card title="deploy" href="/docs/runtime/cli/deploy">
+    Activate a published version for sessions.
+  </Card>
+</UpNext>
