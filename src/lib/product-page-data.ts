@@ -16,7 +16,7 @@ export type ProductPageDefinition = {
   /** Show a “NEW” pill in the page eyebrow. */
   isNew?: boolean;
   sections: ProductPageSection[];
-  /** Shown below the subheadline (for example product docs on docs.phrony.com). */
+  /** Shown below the subheadline (links into `/docs`). */
   documentation?: { label: string; href: string };
   cta?: { label: string; href: string };
   ctaSecondary?: { label: string; href: string };
@@ -228,7 +228,7 @@ export const productPagesBySlug: Record<string, ProductPageDefinition> = {
       'Developers author firewall and authority rules through the SDK. The SDK compiles them into declarative manifests. The runtime evaluates only the manifest — it does not execute customer-defined firewall code.',
     documentation: {
       label: 'Read Firewall documentation',
-      href: 'https://docs.phrony.com/firewall',
+      href: '/docs/agent-spec/resources/policy',
     },
     sections: [
       {

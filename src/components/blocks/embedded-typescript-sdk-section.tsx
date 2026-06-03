@@ -3,6 +3,7 @@ import Link from 'next/link';
 
 import { EMBEDDED_SDK_MARKETING_EXAMPLE } from '@/components/blocks/embedded-sdk-marketing-snippet-text';
 import { MarketingCodeSample } from '@/components/blocks/marketing-code-sample';
+import { documentationHref } from '@/lib/docs-url';
 
 const body =
   'text-pretty text-base leading-relaxed text-muted-foreground md:text-lg md:leading-[28px]';
@@ -32,15 +33,13 @@ export function EmbeddedTypeScriptSdkSection() {
         />
 
         <div className="mt-8 flex max-w-3xl flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
-          <a
-            href="https://docs.phrony.com/packages/typescript-sdk"
-            target="_blank"
-            rel="noopener noreferrer"
+          <Link
+            href="/docs/quick-start/tool-binding"
             className="group inline-flex items-center gap-2 text-sm font-medium text-foreground underline-offset-4 transition-colors hover:text-primary hover:underline"
           >
             Read the TypeScript SDK guide
             <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" aria-hidden />
-          </a>
+          </Link>
           <span className="hidden text-muted-foreground sm:inline" aria-hidden>
             ·
           </span>
@@ -56,13 +55,8 @@ export function EmbeddedTypeScriptSdkSection() {
 
         <p className={`mt-8 max-w-3xl text-sm text-muted-foreground`}>
           Prefer raw HTTP? See the{' '}
-          <Link
-            href="https://docs.phrony.com"
-            className="font-medium text-foreground underline-offset-4 hover:underline"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Phrony API reference
+          <Link href={documentationHref} className="font-medium text-foreground underline-offset-4 hover:underline">
+            Phrony documentation
           </Link>
           .
         </p>

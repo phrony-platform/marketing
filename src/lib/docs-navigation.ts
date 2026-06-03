@@ -1,4 +1,4 @@
-/** Top-level documentation areas (formerly Mintlify tabs). */
+/** Top-level documentation areas in the site docs shell. */
 export type DocTabId = 'home' | 'quick-start' | 'paradigm' | 'agent-spec' | 'runtime';
 
 export type DocNavLink = {
