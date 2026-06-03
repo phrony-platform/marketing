@@ -29,11 +29,9 @@
     }
   },
   "include": [
+    "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",
-    "../../dist/marketing/types/**/*.ts",
-    "../dist/marketing/types/**/*.ts",
-    "next-env.d.ts",
     ".next/types/**/*.ts"
   ],
   "exclude": [

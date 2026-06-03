@@ -61,7 +61,7 @@ function MdxLink({ href, children, ...props }: ComponentProps<'a'>) {
   );
 }
 
-function extractCode(child: ReactNode): { language: DocCodeLanguage; code: string } {
+function extractCode(child: ReactNode): { language: string; code: string } {
   if (!isValidElement(child)) {
     return { language: 'text', code: '' };
   }
@@ -69,7 +69,7 @@ function extractCode(child: ReactNode): { language: DocCodeLanguage; code: strin
   const props = child.props as { className?: string; children?: ReactNode };
   const className = props.className ?? '';
   const match = /language-([\w-]+)/.exec(className);
-  const language = (match?.[1] ?? 'text') as DocCodeLanguage;
+  const language = match?.[1] ?? 'text';
   const code = String(props.children ?? '').replace(/\n$/, '');
 
   return { language, code };
@@ -83,7 +83,7 @@ function MdxPre({ children }: { children?: ReactNode }) {
     return <DocMermaid chart={code} />;
   }
 
-  return <DocCodeBlock language={language} code={code} />;
+  return <DocCodeBlock language={language as DocCodeLanguage} code={code} />;
 }
 
 function MdxCode({ children, className, ...props }: ComponentProps<'code'>) {
@@ -137,8 +137,12 @@ export const docMdxComponents = {
   h3: DocH3,
   h4: DocH4,
   p: DocParagraph,
-  ul: (props: ComponentProps<'ul'>) => <DocList {...props} />,
-  ol: (props: ComponentProps<'ol'>) => <DocList ordered {...props} />,
+  ul: ({ children, className }: ComponentProps<'ul'>) => <DocList className={className}>{children}</DocList>,
+  ol: ({ children, className }: ComponentProps<'ol'>) => (
+    <DocList ordered className={className}>
+      {children}
+    </DocList>
+  ),
   li: DocListItem,
   a: MdxLink,
   pre: MdxPre,

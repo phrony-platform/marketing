@@ -13,11 +13,9 @@ import {
   docKicker,
   docLabel,
 } from '@/components/docs/doc-style';
-import { DOC_EXPLORE_TABS, type DocTabId } from '@/lib/docs-navigation';
+import { DOC_EXPLORE_TABS, type DocExploreTabId } from '@/lib/docs-navigation';
 import { RUNTIME_DOCS_QUICKSTART } from '@/lib/project-urls';
 import { cn } from '@/lib/utils';
-
-type DocExploreTabId = Exclude<DocTabId, 'home'>;
 
 const areaMeta: Record<DocExploreTabId, { icon: typeof Layers; index: string }> = {
   'quick-start': { icon: Rocket, index: '00' },

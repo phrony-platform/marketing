@@ -1,6 +1,8 @@
 /** Top-level documentation areas in the site docs shell. */
 export type DocTabId = 'home' | 'quick-start' | 'paradigm' | 'agent-spec' | 'runtime';
 
+export type DocExploreTabId = Exclude<DocTabId, 'home'>;
+
 export type DocNavLink = {
   title: string;
   href: string;
@@ -166,5 +168,9 @@ export function getDocTabForPath(pathname: string): DocTab | undefined {
   );
 }
 
+function isDocExploreTab(tab: DocTab): tab is DocTab & { id: DocExploreTabId } {
+  return tab.id !== 'home';
+}
+
 /** Content areas linked from the docs home (excludes the Home tab). */
-export const DOC_EXPLORE_TABS = DOC_TABS.filter((tab) => tab.id !== 'home');
+export const DOC_EXPLORE_TABS = DOC_TABS.filter(isDocExploreTab);

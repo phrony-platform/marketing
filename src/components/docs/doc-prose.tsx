@@ -102,7 +102,7 @@ export function DocList({
   className,
 }: {
   ordered?: boolean;
-  children: ReactNode;
+  children?: ReactNode;
   className?: string;
 }) {
   const Tag = ordered ? 'ol' : 'ul';
@@ -121,7 +121,7 @@ export function DocList({
   );
 }
 
-export function DocListItem({ children, className }: { children: ReactNode; className?: string }) {
+export function DocListItem({ children, className }: { children?: ReactNode; className?: string }) {
   return (
     <li className={cn(docBodyClass, docInlineCodeChildClass, className)}>
       {unwrapSingleMdxParagraph(children, [DocParagraph])}
