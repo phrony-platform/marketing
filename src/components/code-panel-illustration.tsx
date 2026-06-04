@@ -1,7 +1,7 @@
 'use client';
 
 import type { LucideIcon } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { motion } from 'framer-motion';
 
 import { cn } from '@/lib/utils';
@@ -125,7 +125,7 @@ export const YAML_LINE_HEIGHT = 27;
 export const YAML_LINE_GAP = 1;
 export const YAML_INDENT_PX = 16;
 
-export type CodePanelSize = 'default' | 'lg';
+export type CodePanelSize = 'compact' | 'default' | 'lg';
 
 export type CodePanelMetrics = {
   lineHeight: number;
@@ -139,6 +139,16 @@ export type CodePanelMetrics = {
 };
 
 export const codePanelSizes: Record<CodePanelSize, CodePanelMetrics> = {
+  compact: {
+    lineHeight: 20,
+    lineGap: 1,
+    indentPx: 12,
+    rowClass: 'h-5',
+    lineNumClass: 'text-[10px]',
+    codeClass: 'text-[10px] leading-none',
+    gutterClass: 'grid-cols-[1.75rem_minmax(0,1fr)]',
+    gapClass: 'gap-1.5',
+  },
   default: {
     lineHeight: YAML_LINE_HEIGHT,
     lineGap: YAML_LINE_GAP,
@@ -248,10 +258,22 @@ export function resolveHighlightInset(
   }
 
   if (showLineNumbers) {
-    return size === 'lg' ? { left: 68, right: 12 } : { left: 52, right: 8 };
+    if (size === 'lg') {
+      return { left: 68, right: 12 };
+    }
+    if (size === 'compact') {
+      return { left: 40, right: 4 };
+    }
+    return { left: 52, right: 8 };
   }
 
-  return size === 'lg' ? { left: -8, right: 56 } : { left: -4, right: 40 };
+  if (size === 'lg') {
+    return { left: -8, right: 56 };
+  }
+  if (size === 'compact') {
+    return { left: -4, right: 28 };
+  }
+  return { left: -4, right: 40 };
 }
 
 type CodePanelChipConfig = {
@@ -310,6 +332,39 @@ function CodePanelChip({
   );
 }
 
+function resolveLineDimClass({
+  lineNum,
+  highlighted,
+  dimOthers,
+  focusViewport,
+  firstHighlight,
+  lastHighlight,
+  dimOpacity,
+}: {
+  lineNum: number;
+  highlighted: boolean;
+  dimOthers: boolean;
+  focusViewport: boolean;
+  firstHighlight: number;
+  lastHighlight: number;
+  dimOpacity: string;
+}) {
+  if (!dimOthers || highlighted) {
+    return null;
+  }
+
+  if (focusViewport) {
+    if (lineNum < firstHighlight) {
+      return 'opacity-20';
+    }
+    if (lineNum > lastHighlight) {
+      return 'opacity-30';
+    }
+  }
+
+  return dimOpacity;
+}
+
 export function CodePanelIllustration({
   lines,
   highlightLines,
@@ -322,6 +377,7 @@ export function CodePanelIllustration({
   highlightInset,
   tone = 'default',
   highlightMode = 'block',
+  focusViewport = false,
   className,
 }: {
   lines: readonly CodePanelLine[];
@@ -335,10 +391,16 @@ export function CodePanelIllustration({
   highlightInset?: { left?: number; right?: number };
   tone?: IllustrationTone;
   highlightMode?: CodePanelHighlightMode;
+  /** Clip to container height and vertically center the highlighted block with edge fades. */
+  focusViewport?: boolean;
   className?: string;
 }) {
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const [focusOffset, setFocusOffset] = useState(0);
   const metrics = codePanelSizes[size];
   const highlightSet = new Set<number>(highlightLines);
+  const firstHighlight = highlightLines[0]!;
+  const lastHighlight = highlightLines[highlightLines.length - 1]!;
   const highlightBounds = getHighlightBounds(lines, highlightLines, metrics);
   const highlightPadding = resolveHighlightInset(size, showLineNumbers, highlightInset);
   const isManifest = tone === 'manifest';
@@ -355,81 +417,136 @@ export function CodePanelIllustration({
     return total;
   }, 0);
 
-  return (
-    <div className={cn('relative min-w-0 text-left', className)} aria-hidden>
-      <div className="relative" style={{ minHeight: panelHeight }}>
-        {chip ? (
-          <CodePanelChip
-            chip={chip}
-            highlightBounds={highlightBounds}
-            placement={chipPlacement}
-            tone={tone}
-          />
-        ) : null}
+  useLayoutEffect(() => {
+    if (!focusViewport) {
+      return;
+    }
 
-        {styles && !rowHighlight ? (
-          <div
-            className={cn('pointer-events-none absolute rounded-sm', styles.line)}
-            style={{
-              top: highlightBounds.top,
-              height: highlightBounds.height,
-              left: highlightPadding.left,
-              right: highlightPadding.right,
-            }}
-          />
-        ) : null}
+    const viewport = viewportRef.current;
+    if (!viewport) {
+      return;
+    }
 
-        <div className="relative grid" style={{ rowGap: metrics.lineGap }}>
-          {lines.map((line) => {
-            const { n, indent = 0, node, spacer } = line;
-            const rowHeight = getLineHeight(line, metrics);
-            const highlighted = highlightSet.has(n);
+    const updateOffset = () => {
+      setFocusOffset(viewport.clientHeight / 2 - highlightBounds.center);
+    };
 
-            if (spacer != null) {
-              return <div key={n} aria-hidden style={{ height: rowHeight }} />;
-            }
+    updateOffset();
+    const observer = new ResizeObserver(updateOffset);
+    observer.observe(viewport);
 
-            return (
-              <div
-                key={n}
-                className={cn(
-                  'grid items-center',
-                  metrics.gapClass,
-                  metrics.rowClass,
-                  showLineNumbers ? metrics.gutterClass : 'grid-cols-1',
-                  rowHighlight && highlighted && rowHighlightClass,
-                  dimOthers && !highlighted && dimOpacity,
-                )}
-                style={{ height: rowHeight }}
-              >
-                {showLineNumbers ? (
-                  <span
-                    className={cn(
-                      'select-none text-right font-mono tabular-nums text-muted-foreground/70',
-                      metrics.lineNumClass,
-                      isManifest && 'border-r border-border/60 pr-3 sm:pr-4',
-                      rowHighlight && highlighted && 'text-muted-foreground',
-                    )}
-                  >
-                    {n}
-                  </span>
-                ) : null}
-                <div
+    return () => observer.disconnect();
+  }, [focusViewport, highlightBounds.center, panelHeight]);
+
+  const codePanel = (
+    <div className="relative" style={{ minHeight: panelHeight }}>
+      {chip ? (
+        <CodePanelChip
+          chip={chip}
+          highlightBounds={highlightBounds}
+          placement={chipPlacement}
+          tone={tone}
+        />
+      ) : null}
+
+      {styles && !rowHighlight ? (
+        <div
+          className={cn('pointer-events-none absolute rounded-sm', styles.line)}
+          style={{
+            top: highlightBounds.top,
+            height: highlightBounds.height,
+            left: highlightPadding.left,
+            right: highlightPadding.right,
+          }}
+        />
+      ) : null}
+
+      <div className="relative grid" style={{ rowGap: metrics.lineGap }}>
+        {lines.map((line) => {
+          const { n, indent = 0, node, spacer } = line;
+          const rowHeight = getLineHeight(line, metrics);
+          const highlighted = highlightSet.has(n);
+
+          if (spacer != null) {
+            return <div key={n} aria-hidden style={{ height: rowHeight }} />;
+          }
+
+          return (
+            <div
+              key={n}
+              className={cn(
+                'grid items-center',
+                metrics.gapClass,
+                metrics.rowClass,
+                showLineNumbers ? metrics.gutterClass : 'grid-cols-1',
+                rowHighlight && highlighted && rowHighlightClass,
+                resolveLineDimClass({
+                  lineNum: n,
+                  highlighted,
+                  dimOthers,
+                  focusViewport,
+                  firstHighlight,
+                  lastHighlight,
+                  dimOpacity,
+                }),
+              )}
+              style={{ height: rowHeight }}
+            >
+              {showLineNumbers ? (
+                <span
                   className={cn(
-                    'min-w-0 font-mono text-foreground',
-                    metrics.codeClass,
-                    nowrap ? 'whitespace-nowrap' : 'break-all',
-                    isManifest && 'tracking-tight',
+                    'select-none text-right font-mono tabular-nums text-muted-foreground/70',
+                    metrics.lineNumClass,
+                    isManifest && 'border-r border-border/60 pr-3 sm:pr-4',
+                    rowHighlight && highlighted && 'text-muted-foreground',
                   )}
-                  style={{ paddingLeft: indent * metrics.indentPx }}
                 >
-                  {node}
-                </div>
+                  {n}
+                </span>
+              ) : null}
+              <div
+                className={cn(
+                  'min-w-0 font-mono text-foreground',
+                  metrics.codeClass,
+                  nowrap ? 'whitespace-nowrap' : 'break-all',
+                  isManifest && 'tracking-tight',
+                )}
+                style={{ paddingLeft: indent * metrics.indentPx }}
+              >
+                {node}
               </div>
-            );
-          })}
-        </div>
+            </div>
+          );
+        })}
       </div>
+    </div>
+  );
+
+  return (
+    <div
+      className={cn('relative min-w-0 text-left', focusViewport && 'h-full min-h-0', className)}
+      aria-hidden
+    >
+      {focusViewport ? (
+        <div ref={viewportRef} className="relative h-full min-h-0 overflow-hidden">
+          <div
+            className="relative will-change-transform"
+            style={{ transform: `translateY(${focusOffset}px)` }}
+          >
+            {codePanel}
+          </div>
+          <div
+            className="pointer-events-none absolute inset-x-0 top-0 z-10 h-[min(32%,8rem)] bg-gradient-to-b from-background via-background/90 to-transparent"
+            aria-hidden
+          />
+          <div
+            className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-[min(28%,7rem)] bg-gradient-to-b from-transparent via-background/85 to-background"
+            aria-hidden
+          />
+        </div>
+      ) : (
+        codePanel
+      )}
     </div>
   );
 }

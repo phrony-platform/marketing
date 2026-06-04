@@ -36,13 +36,7 @@ const STATIC_PREFIX: CodePanelLine[] = [
   { n: 2, node: (<><YamlKeyManifest>kind</YamlKeyManifest>: <YamlStrManifest>Agent</YamlStrManifest></>) },
   { n: 3, node: (<><YamlKeyManifest>metadata</YamlKeyManifest>:</>) },
   { n: 4, indent: 1, node: (<><YamlKeyManifest>name</YamlKeyManifest>: <YamlStrManifest>payment-assistant</YamlStrManifest></>) },
-  { n: 5, indent: 1, node: (<><YamlKeyManifest>namespace</YamlKeyManifest>: <YamlStrManifest>bank</YamlStrManifest></>) },
-  { n: 6, indent: 1, node: (<><YamlKeyManifest>version</YamlKeyManifest>: <YamlStrManifest>1.0.0</YamlStrManifest></>) },
-  { n: 7, node: (<><YamlKeyManifest>spec</YamlKeyManifest>:</>) },
-  { n: 8, indent: 1, node: (<><YamlKeyManifest>purpose</YamlKeyManifest>: <YamlStrManifest>Process retail payment requests</YamlStrManifest></>) },
-  { n: 9, indent: 1, node: (<><YamlKeyManifest>tools</YamlKeyManifest>:</>) },
-  { n: 10, indent: 2, node: (<>- <YamlKeyManifest>ref</YamlKeyManifest>: <YamlStrManifest>bank.submit-payment@^1.0</YamlStrManifest></>) },
-  { n: 11, indent: 3, node: (<><YamlKeyManifest>as</YamlKeyManifest>: <YamlStrManifest>submit_payment</YamlStrManifest></>) },
+  { n: 5, node: (<span className="text-muted-foreground/45"># …</span>) },
   { n: 12, indent: 1, node: (<><YamlKeyManifest>policies</YamlKeyManifest>:</>) },
   { n: 13, indent: 2, node: (<>- <YamlKeyManifest>name</YamlKeyManifest>: <YamlStrManifest>large-payment-approval</YamlStrManifest></>) },
   { n: 14, indent: 3, node: (<><YamlKeyManifest>scope</YamlKeyManifest>: <YamlStrManifest>tool:submit_payment</YamlStrManifest></>) },
@@ -52,6 +46,7 @@ const STATIC_PREFIX: CodePanelLine[] = [
 const STATIC_SUFFIX: CodePanelLine[] = [
   { n: 19, indent: 3, node: (<><YamlKeyManifest>decision</YamlKeyManifest>:</>) },
   { n: 20, indent: 4, node: (<><YamlKeyManifest>type</YamlKeyManifest>: <YamlStrManifest>require_approval</YamlStrManifest></>) },
+  { n: 21, node: (<span className="text-muted-foreground/45"># …</span>) },
 ];
 
 const HIGHLIGHT_LINES = [12, 13, 14, 15, 16, 17, 18, 19, 20] as const;
@@ -246,17 +241,20 @@ export function DeclaredStepIllustration({ active }: { active: boolean }) {
   );
 
   return (
-    <ManifestEditorFrame subtitle="bank/payment-assistant" sectionLabel="policies">
-      <CodePanelIllustration
-        className="relative min-w-0"
-        lines={lines}
-        highlightLines={HIGHLIGHT_LINES}
-        highlightMode="rows"
-        tone="manifest"
-        nowrap
-        size="lg"
-        showLineNumbers
-      />
-    </ManifestEditorFrame>
+    <div className="flex h-full min-h-0 w-full flex-1 flex-col">
+      <ManifestEditorFrame subtitle="bank/payment-assistant" sectionLabel="policies" fillHeight>
+        <CodePanelIllustration
+          className="relative min-h-0 min-w-0 flex-1"
+          lines={lines}
+          highlightLines={HIGHLIGHT_LINES}
+          highlightMode="rows"
+          tone="manifest"
+          focusViewport
+          nowrap
+          size="lg"
+          showLineNumbers
+        />
+      </ManifestEditorFrame>
+    </div>
   );
 }

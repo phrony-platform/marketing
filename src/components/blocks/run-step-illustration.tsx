@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import {
   Bot,
   Brain,
@@ -18,6 +18,16 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import {
   stepActionButtonDanger,
   stepActionButtonDangerActive,
+  stepIllustrationBody,
+  stepIllustrationBodyPrimary,
+  stepIllustrationChip,
+  stepIllustrationChipIcon,
+  stepIllustrationChipLabel,
+  stepIllustrationMeta,
+  stepIllustrationMuted,
+  stepIllustrationNode,
+  stepIllustrationNodeIcon,
+  stepIllustrationPanelPad,
   stepPanel,
   stepPanelInset,
   stepTypeCursor,
@@ -27,42 +37,13 @@ import { Spinner } from '@/components/ui/spinner';
 import { cn } from '@/lib/utils';
 
 const runTitle =
-  'font-mono text-sm font-medium tracking-tight text-foreground sm:text-base md:text-lg';
-
-const runBody =
-  'font-mono text-xs leading-relaxed text-foreground sm:text-sm md:text-base';
-
-const runBodyPrimary =
-  'font-mono text-sm leading-snug text-foreground sm:text-base md:text-lg';
-
-const runMuted =
-  'font-mono text-xs text-muted-foreground sm:text-sm md:text-base';
-
-const runMeta =
-  'font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground sm:text-[11px]';
-
-const runPanelPad = 'px-4 py-3 sm:px-5 sm:py-4';
-
-const runInsetPad = 'px-3 py-2.5 sm:px-3.5 sm:py-3';
-
-const runNode = 'size-8 sm:size-9';
-
-const runNodeIcon = 'size-3.5 sm:size-4';
-
-const runChip =
-  'absolute z-10 flex items-center gap-1.5 rounded-sm border border-border bg-background px-2 py-1 whitespace-nowrap sm:gap-2 sm:px-2.5 sm:py-1.5';
-
-const runChipIcon =
-  'flex size-6 items-center justify-center rounded-sm border border-border bg-muted/40 text-muted-foreground sm:size-7';
-
-const runChipLabel =
-  'font-mono text-[10px] font-medium uppercase tracking-[0.12em] text-foreground sm:text-[11px]';
+  'font-mono text-base font-medium tracking-tight text-foreground sm:text-lg';
 
 const runStatusBadge =
-  'inline-flex shrink-0 items-center gap-1 rounded-sm border border-border bg-muted/30 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider text-foreground sm:text-[10px]';
+  'inline-flex shrink-0 items-center gap-1 rounded-sm border border-border bg-muted/30 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-foreground sm:text-xs';
 
 const runActionButton =
-  'flex items-center justify-center gap-1.5 rounded-sm border border-border bg-background px-3 py-2 font-mono text-xs text-foreground sm:text-[13px]';
+  'flex items-center justify-center gap-1.5 rounded-sm border border-border bg-background px-3 py-2 font-mono text-sm text-foreground sm:px-3.5 sm:py-2.5 sm:text-base';
 
 const CUSTOMER_NAME = 'Maria K.';
 const PAYMENT_AMOUNT = '€1,500';
@@ -119,6 +100,57 @@ const PHASE_HOLD_MS: Record<RunPhase, number> = {
 
 const fade = { duration: 0.34, ease: [0.22, 1, 0.36, 1] as const };
 
+const TRACE_STEP_GAP_PX = 16;
+
+const TRACE_STEPS = ['thinking', 'submitting', 'policy', 'approval', 'rejected'] as const;
+
+/** Highest step index mounted in the timeline (steps appear one by one). */
+function getMaxRevealedStepIndex(phase: RunPhase, reduceMotion: boolean | null): number {
+  if (reduceMotion) {
+    return TRACE_STEPS.length - 1;
+  }
+
+  switch (phase) {
+    case 'thinking':
+      return 0;
+    case 'submitting':
+      return 1;
+    case 'policy':
+      return 2;
+    case 'approval':
+    case 'rejecting':
+      return 3;
+    case 'rejected':
+      return 4;
+  }
+}
+
+function isTraceStepRevealed(
+  step: (typeof TRACE_STEPS)[number],
+  phase: RunPhase,
+  reduceMotion: boolean | null,
+) {
+  return TRACE_STEPS.indexOf(step) <= getMaxRevealedStepIndex(phase, reduceMotion);
+}
+
+/** Index of the top step in the two-step viewport window. */
+function getWindowTopIndex(phase: RunPhase): number {
+  switch (phase) {
+    case 'thinking':
+    case 'submitting':
+      return 0;
+    case 'policy':
+      return 1;
+    case 'approval':
+    case 'rejecting':
+      return 2;
+    case 'rejected':
+      return 3;
+  }
+}
+
+const slideSpring = { type: 'spring' as const, stiffness: 170, damping: 32, mass: 1.05 };
+
 type StepStatus = 'pending' | 'active' | 'complete' | 'failed';
 
 function stepStatus(
@@ -171,33 +203,33 @@ function RunTraceChip({ phase }: { phase: RunPhase }) {
       initial={{ opacity: 0, y: -6 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.24 }}
-      className={cn(runChip, 'right-1 top-0 sm:right-2')}
+      className={cn(stepIllustrationChip, 'right-0 top-0 z-20')}
     >
-      <span className={runChipIcon}>
+      <span className={stepIllustrationChipIcon}>
         {phase === 'thinking' ? (
-          <Brain className="size-3.5 sm:size-4" strokeWidth={1.75} aria-hidden />
+          <Brain className="size-4 sm:size-[18px]" strokeWidth={1.75} aria-hidden />
         ) : phase === 'rejected' ? (
-          <X className="size-3.5 sm:size-4" strokeWidth={1.75} aria-hidden />
+          <X className="size-4 sm:size-[18px]" strokeWidth={1.75} aria-hidden />
         ) : phase === 'approval' || phase === 'rejecting' ? (
-          <UserCheck className="size-3.5 sm:size-4" strokeWidth={1.75} aria-hidden />
+          <UserCheck className="size-4 sm:size-[18px]" strokeWidth={1.75} aria-hidden />
         ) : phase === 'policy' ? (
-          <Shield className="size-3.5 sm:size-4" strokeWidth={1.75} aria-hidden />
+          <Shield className="size-4 sm:size-[18px]" strokeWidth={1.75} aria-hidden />
         ) : (
-          <Bot className="size-3.5 sm:size-4" strokeWidth={1.75} aria-hidden />
+          <Bot className="size-4 sm:size-[18px]" strokeWidth={1.75} aria-hidden />
         )}
       </span>
-      <span className={runChipLabel}>{label}</span>
+      <span className={stepIllustrationChipLabel}>{label}</span>
     </motion.div>
   );
 }
 
 function TimelineNode({ status }: { status: StepStatus }) {
   return (
-    <div className={cn('relative z-10 flex shrink-0 items-center justify-center', runNode)}>
+    <div className={cn('relative z-10 flex shrink-0 items-center justify-center', stepIllustrationNode)}>
       <span
         className={cn(
           'relative flex items-center justify-center rounded-sm border bg-background',
-          runNode,
+          stepIllustrationNode,
           status === 'complete' && 'border-border text-foreground/80',
           status === 'active' && 'border-foreground/35 text-foreground',
           status === 'failed' && 'border-foreground/35 text-foreground/90',
@@ -205,13 +237,17 @@ function TimelineNode({ status }: { status: StepStatus }) {
         )}
       >
         {status === 'complete' ? (
-          <CheckCircle2 className={runNodeIcon} strokeWidth={1.75} aria-hidden />
+          <CheckCircle2 className={stepIllustrationNodeIcon} strokeWidth={1.75} aria-hidden />
         ) : status === 'failed' ? (
-          <XCircle className={runNodeIcon} strokeWidth={1.75} aria-hidden />
+          <XCircle className={stepIllustrationNodeIcon} strokeWidth={1.75} aria-hidden />
         ) : status === 'active' ? (
-          <LoaderCircle className={cn(runNodeIcon, 'animate-spin motion-reduce:animate-none')} strokeWidth={1.75} aria-hidden />
+          <LoaderCircle
+            className={cn(stepIllustrationNodeIcon, 'animate-spin motion-reduce:animate-none')}
+            strokeWidth={1.75}
+            aria-hidden
+          />
         ) : (
-          <Circle className="size-3.5 sm:size-4" strokeWidth={1.75} aria-hidden />
+          <Circle className="size-3 sm:size-3.5" strokeWidth={1.75} aria-hidden />
         )}
       </span>
     </div>
@@ -221,45 +257,38 @@ function TimelineNode({ status }: { status: StepStatus }) {
 function TimelineStep({
   title,
   status,
-  visible,
   children,
-  isLast = false,
+  showConnector = false,
+  reduceMotion,
 }: {
   title: string;
   status: StepStatus;
-  visible: boolean;
   children?: ReactNode;
-  isLast?: boolean;
+  showConnector?: boolean;
+  reduceMotion: boolean | null;
 }) {
-  if (!visible) {
-    return null;
-  }
-
   return (
     <motion.li
-      initial={{ opacity: 0, y: 12 }}
+      data-trace-step
+      className="relative flex shrink-0 gap-3 sm:gap-4"
+      initial={reduceMotion ? false : { opacity: 0, y: 28 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={fade}
-      className="relative flex gap-3 sm:gap-4"
+      transition={reduceMotion ? { duration: 0 } : slideSpring}
     >
       <div className="flex flex-col items-center">
         <TimelineNode status={status} />
-        {!isLast ? (
-          <motion.span
+        {showConnector ? (
+          <span
             className={cn(
-              'mt-1.5 w-px flex-1 min-h-[1.5rem]',
+              'mt-1.5 min-h-4 w-px flex-1',
               status === 'pending' ? 'bg-border/40' : 'bg-border/70',
             )}
-            initial={{ scaleY: 0 }}
-            animate={{ scaleY: 1 }}
-            style={{ originY: 0 }}
-            transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
             aria-hidden
           />
         ) : null}
       </div>
 
-      <div className="min-w-0 flex-1 pb-5 sm:pb-6">
+      <div className="min-w-0 flex-1 pb-2 sm:pb-3">
         <p
           className={cn(
             runTitle,
@@ -269,9 +298,107 @@ function TimelineStep({
         >
           {title}
         </p>
-        {children ? <div className="mt-2.5 min-w-0">{children}</div> : null}
+        {children ? <div className="mt-2 min-w-0 sm:mt-2.5">{children}</div> : null}
       </div>
     </motion.li>
+  );
+}
+
+const TRACE_VIEWPORT_EDGE_FADE_PX = 56;
+
+const traceViewportMaskStyle = {
+  maskImage: `linear-gradient(to bottom, transparent 0px, black ${TRACE_VIEWPORT_EDGE_FADE_PX}px, black calc(100% - ${TRACE_VIEWPORT_EDGE_FADE_PX}px), transparent 100%)`,
+  WebkitMaskImage: `linear-gradient(to bottom, transparent 0px, black ${TRACE_VIEWPORT_EDGE_FADE_PX}px, black calc(100% - ${TRACE_VIEWPORT_EDGE_FADE_PX}px), transparent 100%)`,
+} as const;
+
+function measureTraceSlide(
+  topIndex: number,
+  list: HTMLOListElement | null,
+  containerHeight: number,
+) {
+  const items = list?.querySelectorAll<HTMLElement>('[data-trace-step]');
+  if (!items?.length || containerHeight <= 0) {
+    return 0;
+  }
+
+  const heights = Array.from(items, (item) => item.offsetHeight);
+  const offsets: number[] = [0];
+
+  for (let index = 0; index < heights.length; index += 1) {
+    const gap = index < heights.length - 1 ? TRACE_STEP_GAP_PX : 0;
+    offsets.push(offsets[index]! + heights[index]! + gap);
+  }
+
+  const clampedTop = Math.min(Math.max(topIndex, 0), Math.max(0, heights.length - 1));
+  const windowEndIndex = Math.min(clampedTop + 2, heights.length);
+  const contentTop = offsets[clampedTop] ?? 0;
+  const windowHeight = Math.max(offsets[windowEndIndex]! - contentTop, heights[clampedTop] ?? 0);
+  const centerPadding = Math.max(0, (containerHeight - windowHeight) / 2);
+
+  return contentTop - centerPadding;
+}
+
+function RunTraceSlideViewport({
+  topIndex,
+  reduceMotion,
+  revealedCount,
+  children,
+}: {
+  topIndex: number;
+  reduceMotion: boolean | null;
+  revealedCount: number;
+  children: ReactNode;
+}) {
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLOListElement>(null);
+  const [offsetY, setOffsetY] = useState(0);
+
+  const remeasure = useCallback(() => {
+    const containerHeight = viewportRef.current?.clientHeight ?? 0;
+    setOffsetY(measureTraceSlide(topIndex, listRef.current, containerHeight));
+  }, [topIndex, revealedCount]);
+
+  useLayoutEffect(() => {
+    remeasure();
+  }, [remeasure, topIndex]);
+
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    const list = listRef.current;
+    if (!viewport || !list) {
+      return;
+    }
+
+    const observer = new ResizeObserver(remeasure);
+    observer.observe(viewport);
+    observer.observe(list);
+    for (const item of list.querySelectorAll('[data-trace-step]')) {
+      observer.observe(item);
+    }
+
+    return () => observer.disconnect();
+  }, [remeasure]);
+
+  return (
+    <div
+      ref={viewportRef}
+      className="relative min-h-0 flex-1 overflow-hidden pt-9 sm:pt-10"
+      style={traceViewportMaskStyle}
+    >
+      <motion.div
+        className="relative will-change-transform"
+        animate={{ y: -offsetY }}
+        transition={reduceMotion ? { duration: 0 } : slideSpring}
+      >
+        <ol
+          ref={listRef}
+          className="relative m-0 flex list-none flex-col p-0"
+          style={{ gap: TRACE_STEP_GAP_PX }}
+        >
+          {children}
+        </ol>
+      </motion.div>
+    </div>
   );
 }
 
@@ -349,10 +476,31 @@ function ReasoningTypewriter({
   }
 
   return (
-    <p className={cn('mt-2 leading-relaxed', runBody)}>
+    <p className={cn('mt-1.5 leading-relaxed', stepIllustrationBody)}>
       {nodes}
       {showCursor ? <span className={stepTypeCursor} aria-hidden /> : null}
     </p>
+  );
+}
+
+function SubmitPaymentPanel({ active }: { active: boolean }) {
+  return (
+    <div className={cn(stepPanel, stepIllustrationPanelPad)}>
+      <div className="flex items-center gap-2">
+        {active ? (
+          <Spinner className="size-4 shrink-0 text-muted-foreground motion-reduce:animate-none sm:size-5" />
+        ) : (
+          <Bot className="size-4 shrink-0 text-muted-foreground sm:size-5" strokeWidth={1.75} aria-hidden />
+        )}
+        <p className={stepIllustrationBodyPrimary}>
+          Calling <StepHighlight>submit_payment</StepHighlight>
+        </p>
+      </div>
+      <p className={cn('mt-2 leading-relaxed', stepIllustrationMuted)}>
+        Transferring <StepHighlight>{PAYMENT_AMOUNT}</StepHighlight> to account{' '}
+        <StepHighlight>{ACCOUNT_ID}</StepHighlight>
+      </p>
+    </div>
   );
 }
 
@@ -366,19 +514,14 @@ function AgentThinkingPanel({
   reduceMotion: boolean | null;
 }) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={spring}
-      className={cn(stepPanel, runPanelPad)}
-    >
-      <div className="flex items-center gap-2.5">
+    <div className={cn(stepPanel, stepIllustrationPanelPad)}>
+      <div className="flex items-center gap-2">
         {active ? (
-          <Spinner className="size-3.5 shrink-0 text-muted-foreground motion-reduce:animate-none sm:size-4" />
+          <Spinner className="size-4 shrink-0 text-muted-foreground motion-reduce:animate-none sm:size-5" />
         ) : (
-          <Brain className="size-3.5 shrink-0 text-muted-foreground sm:size-4" strokeWidth={1.75} aria-hidden />
+          <Brain className="size-4 shrink-0 text-muted-foreground sm:size-5" strokeWidth={1.75} aria-hidden />
         )}
-        <p className={runBodyPrimary}>
+        <p className={stepIllustrationBodyPrimary}>
           Agent is thinking
           {active ? (
             <motion.span
@@ -394,11 +537,11 @@ function AgentThinkingPanel({
         </p>
       </div>
 
-      <div className={cn(stepPanelInset, runInsetPad, 'mt-3')}>
-        <p className={runMeta}>Reasoning</p>
+      <div className={cn(stepPanelInset, 'mt-2.5 sm:mt-3')}>
+        <p className={stepIllustrationMeta}>Reasoning</p>
         <ReasoningTypewriter active={active} complete={complete} reduceMotion={reduceMotion} />
       </div>
-    </motion.div>
+    </div>
   );
 }
 
@@ -447,24 +590,19 @@ function PolicyEvaluationPanel({
   }, [active, complete, reduceMotion]);
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={spring}
-      className={cn(stepPanel, runPanelPad)}
-    >
+    <div className={cn(stepPanel, stepIllustrationPanelPad)}>
       <div className="flex items-center justify-between gap-3">
-        <p className={cn(runMeta, 'min-w-0 truncate')}>
+        <p className={cn(stepIllustrationMeta, 'min-w-0 truncate')}>
           Policy ·{' '}
           <span className="normal-case tracking-normal">
             <StepHighlight>{POLICY_NAME}</StepHighlight>
           </span>
         </p>
         {scene === 'checking' ? (
-          <Spinner className="size-3.5 shrink-0 text-muted-foreground motion-reduce:animate-none sm:size-4" />
+          <Spinner className="size-4 shrink-0 text-muted-foreground motion-reduce:animate-none sm:size-5" />
         ) : scene === 'matched' ? (
           <span className={runStatusBadge}>
-            <CheckCircle2 className="size-3" strokeWidth={1.75} aria-hidden />
+            <CheckCircle2 className="size-3.5 sm:size-4" strokeWidth={1.75} aria-hidden />
             Matched
           </span>
         ) : null}
@@ -477,7 +615,7 @@ function PolicyEvaluationPanel({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className={cn('mt-3 leading-snug', runMuted)}
+            className={cn('mt-2 leading-snug', stepIllustrationMuted)}
           >
             Comparing request against policy conditions…
           </motion.p>
@@ -490,23 +628,23 @@ function PolicyEvaluationPanel({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
             transition={fade}
-            className="mt-3 space-y-2"
+            className="mt-2.5 space-y-2 sm:mt-3"
           >
-            <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3">
-              <div className={cn(stepPanelInset, runInsetPad, 'min-w-0')}>
-                <p className={runMeta}>Rule</p>
-                <p className={cn('mt-1 truncate', runBody)}>
+            <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2.5 sm:gap-3">
+              <div className={cn(stepPanelInset, 'min-w-0')}>
+                <p className={stepIllustrationMeta}>Rule</p>
+                <p className={cn('mt-0.5 truncate', stepIllustrationBody)}>
                   <StepHighlight>{POLICY_RULE}</StepHighlight>
                 </p>
               </div>
 
-              <span className={cn(runMeta, 'text-muted-foreground/50')} aria-hidden>
+              <span className={cn(stepIllustrationMeta, 'text-muted-foreground/50')} aria-hidden>
                 vs
               </span>
 
-              <div className={cn(stepPanelInset, runInsetPad, 'min-w-0', scene === 'matched' && 'border-foreground/25 bg-muted/35')}>
-                <p className={runMeta}>Actual</p>
-                <p className={cn('mt-1 truncate', runBody)}>
+              <div className={cn(stepPanelInset, 'min-w-0', scene === 'matched' && 'border-foreground/25 bg-muted/35')}>
+                <p className={stepIllustrationMeta}>Actual</p>
+                <p className={cn('mt-0.5 truncate', stepIllustrationBody)}>
                   <StepHighlight>{POLICY_ACTUAL}</StepHighlight>
                 </p>
               </div>
@@ -517,21 +655,21 @@ function PolicyEvaluationPanel({
                 initial={{ opacity: 0, y: 3 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ ...fade, delay: 0.08 }}
-                className={cn('flex items-center gap-2 leading-snug', runBody)}
+                className={cn('flex items-center gap-1.5 leading-snug', stepIllustrationBody)}
               >
-                <CheckCircle2 className="size-3.5 shrink-0 text-muted-foreground sm:size-4" strokeWidth={1.75} aria-hidden />
+                <CheckCircle2 className="size-4 shrink-0 text-muted-foreground sm:size-5" strokeWidth={1.75} aria-hidden />
                 {PAYMENT_AMOUNT} exceeds {POLICY_THRESHOLD} — approval required
               </motion.p>
             ) : (
-              <p className={cn('flex items-center gap-2 leading-snug', runMuted)}>
-                <LoaderCircle className="size-3.5 shrink-0 animate-spin motion-reduce:animate-none sm:size-4" strokeWidth={1.75} aria-hidden />
+              <p className={cn('flex items-center gap-1.5 leading-snug', stepIllustrationMuted)}>
+                <LoaderCircle className="size-4 shrink-0 animate-spin motion-reduce:animate-none sm:size-5" strokeWidth={1.75} aria-hidden />
                 Checking match…
               </p>
             )}
           </motion.div>
         ) : null}
       </AnimatePresence>
-    </motion.div>
+    </div>
   );
 }
 
@@ -544,40 +682,30 @@ function ApprovalPanel({
 }) {
   const rejectPressed = phase === 'rejecting' || phase === 'rejected';
   const showCursor = phase === 'approval' && !reduceMotion;
-  const showPanel = phase === 'approval' || phase === 'rejecting';
+  const statusLabel =
+    phase === 'rejecting' ? 'Rejecting…' : phase === 'rejected' ? 'Rejected' : 'Pending';
 
   return (
-    <AnimatePresence mode="wait">
-      {showPanel ? (
-        <motion.div
-          key="approval-panel"
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -6 }}
-          transition={spring}
-          className={cn(stepPanel, runPanelPad)}
-        >
-      <div className="flex items-start justify-between gap-4">
+    <div className={cn(stepPanel, stepIllustrationPanelPad)}>
+      <div className="flex items-start justify-between gap-2.5">
         <div className="min-w-0">
-          <p className={runMeta}>Manager approval</p>
-          <p className={cn('mt-1.5', runBodyPrimary)}>
+          <p className={stepIllustrationMeta}>Manager approval</p>
+          <p className={cn('mt-1', stepIllustrationBodyPrimary)}>
             Payment <StepHighlight>{PAYMENT_AMOUNT}</StepHighlight>
           </p>
-          <p className={cn('mt-1', runMuted)}>
+          <p className={cn('mt-0.5', stepIllustrationMuted)}>
             Account {ACCOUNT_ID} · exceeds {POLICY_THRESHOLD} threshold
           </p>
         </div>
-        <span className={runStatusBadge}>
-          {phase === 'rejecting' ? 'Rejecting…' : 'Pending'}
-        </span>
+        <span className={runStatusBadge}>{statusLabel}</span>
       </div>
 
-      <div className="relative mt-4 grid grid-cols-2 gap-2.5 sm:gap-3">
+      <div className="relative mt-3 grid grid-cols-2 gap-2.5 sm:mt-4 sm:gap-3">
         <motion.div
           className={cn(runActionButton, rejectPressed && 'opacity-45')}
           animate={rejectPressed ? { scale: 1 } : undefined}
         >
-          <Check className="size-3.5 sm:size-4" strokeWidth={2} aria-hidden />
+          <Check className="size-4" strokeWidth={2} aria-hidden />
           Approve
         </motion.div>
 
@@ -600,14 +728,14 @@ function ApprovalPanel({
               : { duration: 1.4, repeat: Infinity, ease: 'easeInOut' }
           }
         >
-          <X className="size-3.5 sm:size-4" strokeWidth={2} aria-hidden />
+          <X className="size-4" strokeWidth={2} aria-hidden />
           Reject
         </motion.div>
 
         <AnimatePresence>
           {showCursor ? (
             <motion.div
-              className="pointer-events-none absolute bottom-[-0.35rem] right-[22%] z-20 sm:right-[24%]"
+              className="pointer-events-none absolute bottom-[-0.25rem] right-[22%] z-20 sm:right-[24%]"
               initial={{ opacity: 0, x: 28, y: 20 }}
               animate={{ opacity: 1, x: 0, y: 0 }}
               exit={{ opacity: 0, scale: 0.85 }}
@@ -626,58 +754,47 @@ function ApprovalPanel({
           ) : null}
         </AnimatePresence>
       </div>
-        </motion.div>
-      ) : (
-        <motion.p
-          key="approval-summary"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className={runMuted}
-        >
-          Manager rejected the {PAYMENT_AMOUNT} payment
-        </motion.p>
-      )}
-    </AnimatePresence>
+    </div>
   );
 }
 
 function AgentRejectedOutcome() {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={fade}
-      className={cn(stepPanel, runPanelPad)}
-    >
-      <div className="mb-2.5 flex items-center gap-2.5">
-        <span className={runChipIcon}>
-          <Bot className="size-3.5 sm:size-4" strokeWidth={1.75} aria-hidden />
+    <div className={cn(stepPanel, stepIllustrationPanelPad)}>
+      <div className="mb-1.5 flex items-center gap-2">
+        <span className={stepIllustrationChipIcon}>
+          <Bot className="size-4 sm:size-[18px]" strokeWidth={1.75} aria-hidden />
         </span>
-        <span className={runMeta}>Agent response</span>
+        <span className={stepIllustrationMeta}>Agent response</span>
       </div>
-      <p className={cn('leading-relaxed', runBodyPrimary)}>
+      <p className={cn('leading-relaxed', stepIllustrationBodyPrimary)}>
         The payment was rejected — the manager declined the {PAYMENT_AMOUNT} transfer.
       </p>
-    </motion.div>
+    </div>
   );
 }
 
 function RunTraceContent({ phase, reduceMotion }: { phase: RunPhase; reduceMotion: boolean | null }) {
-  const phaseIndex = PHASE_ORDER.indexOf(phase);
-  const showThinking = phaseIndex >= 0;
-  const showSubmitting = phaseIndex >= 1;
-  const showPolicy = phaseIndex >= 2;
-  const showApproval = phaseIndex >= 3;
-  const showRejectedStep = phaseIndex >= PHASE_ORDER.indexOf('rejected');
+  const windowTopIndex = getWindowTopIndex(phase);
+  const maxRevealed = getMaxRevealedStepIndex(phase, reduceMotion);
+  const policyComplete = PHASE_ORDER.indexOf(phase) > PHASE_ORDER.indexOf('policy');
 
   return (
-    <div className="relative pt-12 sm:pt-14">
+    <div className="relative flex h-full min-h-0 flex-1 flex-col">
       <RunTraceChip phase={phase} />
 
-      <ol className="relative m-0 list-none p-0">
-        {showThinking ? (
-          <TimelineStep title="Reason" status={stepStatus(phase, 'thinking')} visible>
+      <RunTraceSlideViewport
+        topIndex={windowTopIndex}
+        reduceMotion={reduceMotion}
+        revealedCount={maxRevealed + 1}
+      >
+        {isTraceStepRevealed('thinking', phase, reduceMotion) ? (
+          <TimelineStep
+            title="Reason"
+            status={stepStatus(phase, 'thinking')}
+            showConnector={maxRevealed > 0}
+            reduceMotion={reduceMotion}
+          >
             <AgentThinkingPanel
               active={phase === 'thinking'}
               complete={phase !== 'thinking'}
@@ -686,49 +803,53 @@ function RunTraceContent({ phase, reduceMotion }: { phase: RunPhase; reduceMotio
           </TimelineStep>
         ) : null}
 
-        {showSubmitting ? (
-          <TimelineStep title="Submit payment" status={stepStatus(phase, 'submitting')} visible>
-            <p className={cn('leading-relaxed', runMuted)}>
-              Calling <StepHighlight>submit_payment</StepHighlight> for {PAYMENT_AMOUNT}
-            </p>
+        {isTraceStepRevealed('submitting', phase, reduceMotion) ? (
+          <TimelineStep
+            title="Submit payment"
+            status={stepStatus(phase, 'submitting')}
+            showConnector={maxRevealed > 1}
+            reduceMotion={reduceMotion}
+          >
+            <SubmitPaymentPanel active={phase === 'submitting'} />
           </TimelineStep>
         ) : null}
 
-        {showPolicy ? (
+        {isTraceStepRevealed('policy', phase, reduceMotion) ? (
           <TimelineStep
             title="Evaluate policy"
             status={stepStatus(phase, 'policy')}
-            visible
+            showConnector={maxRevealed > 2}
+            reduceMotion={reduceMotion}
           >
             <PolicyEvaluationPanel
               active={phase === 'policy'}
-              complete={PHASE_ORDER.indexOf(phase) > PHASE_ORDER.indexOf('policy')}
+              complete={policyComplete}
               reduceMotion={reduceMotion}
             />
           </TimelineStep>
         ) : null}
 
-        {showApproval ? (
+        {isTraceStepRevealed('approval', phase, reduceMotion) ? (
           <TimelineStep
             title="Route for approval"
             status={stepStatus(phase, 'approval')}
-            visible
+            showConnector={maxRevealed > 3}
+            reduceMotion={reduceMotion}
           >
             <ApprovalPanel phase={phase} reduceMotion={reduceMotion} />
           </TimelineStep>
         ) : null}
 
-        {showRejectedStep ? (
+        {isTraceStepRevealed('rejected', phase, reduceMotion) ? (
           <TimelineStep
             title="Payment rejected"
             status={stepStatus(phase, 'rejected')}
-            visible
-            isLast
+            reduceMotion={reduceMotion}
           >
             <AgentRejectedOutcome />
           </TimelineStep>
         ) : null}
-      </ol>
+      </RunTraceSlideViewport>
     </div>
   );
 }
@@ -780,7 +901,7 @@ export function RunStepIllustration({ active }: { active: boolean }) {
   }, [active, reduceMotion]);
 
   return (
-    <div className="relative min-w-0" aria-hidden>
+    <div className="relative flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden" aria-hidden>
       <RunTraceContent phase={phase} reduceMotion={reduceMotion} />
     </div>
   );

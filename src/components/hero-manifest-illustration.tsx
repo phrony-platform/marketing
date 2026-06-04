@@ -11,6 +11,7 @@ import {
   type CodePanelLine,
 } from '@/components/code-panel-illustration';
 import { ManifestEditorFrame } from '@/components/manifest-editor-frame';
+import { useCodePanelSize } from '@/lib/use-code-panel-size';
 import { cn } from '@/lib/utils';
 
 const manifestHighlights = [
@@ -45,6 +46,7 @@ const yamlLines: CodePanelLine[] = [
 ];
 
 export function HeroManifestIllustration({ className }: { className?: string }) {
+  const panelSize = useCodePanelSize();
   const reduceMotion = useReducedMotion();
   const [activeIndex, setActiveIndex] = useState(0);
 
@@ -68,13 +70,18 @@ export function HeroManifestIllustration({ className }: { className?: string }) 
       animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
       transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
     >
-      <ManifestEditorFrame subtitle="demo/triage" sectionLabel={active.id}>
+      <ManifestEditorFrame
+        subtitle="demo/triage"
+        sectionLabel={active.id}
+        compact={panelSize === 'compact'}
+      >
         <CodePanelIllustration
           className="relative min-w-0 overflow-hidden overscroll-none"
           lines={yamlLines}
           highlightLines={active.lines}
           highlightMode="rows"
           tone="manifest"
+          size={panelSize}
           showLineNumbers
         />
       </ManifestEditorFrame>

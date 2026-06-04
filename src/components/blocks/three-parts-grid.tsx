@@ -157,7 +157,7 @@ function StepIllustration({
     <div
       className={cn(
         stepShell,
-        fillHeight && 'flex h-full min-h-[min(36rem,calc(100svh-14rem))] flex-col justify-center lg:min-h-[calc(100svh-18rem)]',
+        fillHeight && 'flex h-full min-h-[min(36rem,calc(100svh-14rem))] flex-col justify-stretch lg:min-h-[calc(100svh-18rem)]',
       )}
     >
       {part.illustration === 'declared-animation' ? (

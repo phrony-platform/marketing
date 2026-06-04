@@ -26,12 +26,12 @@ export function Hero() {
             {heroDescription}
           </p>
           <div className="mt-9 flex justify-center lg:justify-start">
-            <div className="inline-flex max-w-full flex-nowrap items-center gap-3">
+            <div className="flex w-full max-w-xs flex-col gap-3 sm:inline-flex sm:max-w-none sm:w-auto sm:flex-row sm:flex-nowrap sm:items-center">
               <a
                 href={RUNTIME_GITHUB_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="group inline-flex shrink-0 origin-center items-center gap-2 rounded-md bg-primary px-6 py-3 text-base font-medium text-primary-foreground shadow-sm transition-colors duration-100 hover:bg-primary/90 motion-reduce:transition-none"
+                className="group inline-flex w-full shrink-0 origin-center items-center justify-center gap-2 rounded-md bg-primary px-6 py-3 text-base font-medium text-primary-foreground shadow-sm transition-colors duration-100 hover:bg-primary/90 motion-reduce:transition-none sm:w-auto sm:justify-start"
               >
                 <Github className="size-5 shrink-0" aria-hidden />
                 View on GitHub
@@ -42,7 +42,7 @@ export function Hero() {
               </a>
               <Link
                 href={documentationHref}
-                className="group inline-flex shrink-0 origin-center items-center gap-2 rounded-md px-6 py-3 text-base font-medium text-muted-foreground transition-colors duration-100 hover:bg-muted/50 hover:text-foreground motion-reduce:transition-none"
+                className="group inline-flex w-full shrink-0 origin-center items-center justify-center gap-2 rounded-md px-6 py-3 text-base font-medium text-muted-foreground transition-colors duration-100 hover:bg-muted/50 hover:text-foreground motion-reduce:transition-none sm:w-auto sm:justify-start"
               >
                 <BookOpen className="size-5 shrink-0" aria-hidden />
                 Read documentation
