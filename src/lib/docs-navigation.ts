@@ -1,5 +1,7 @@
+import { TYPESCRIPT_SDK_NAV } from '@/lib/typescript-sdk-nav';
+
 /** Top-level documentation areas in the site docs shell. */
-export type DocTabId = 'home' | 'quick-start' | 'paradigm' | 'agent-spec' | 'runtime';
+export type DocTabId = 'home' | 'quick-start' | 'paradigm' | 'agent-spec' | 'runtime' | 'sdks';
 
 export type DocExploreTabId = Exclude<DocTabId, 'home'>;
 
@@ -145,6 +147,22 @@ export const DOC_TABS: DocTab[] = [
           { title: 'approvals', href: '/docs/runtime/cli/approvals' },
           { title: 'agents', href: '/docs/runtime/cli/agents' },
         ],
+      },
+    ],
+  },
+  {
+    id: 'sdks',
+    label: 'SDKs',
+    href: '/docs/sdks',
+    description: 'Client libraries for the Phrony runtime — install, connect, run agents, and register tool workers.',
+    groups: [
+      {
+        group: 'Overview',
+        pages: [{ title: 'Introduction', href: '/docs/sdks' }],
+      },
+      {
+        group: 'TypeScript',
+        pages: [...TYPESCRIPT_SDK_NAV],
       },
     ],
   },

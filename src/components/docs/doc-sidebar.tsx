@@ -8,6 +8,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { docLabel } from '@/components/docs/doc-style';
 import type { DocTab } from '@/lib/docs-navigation';
 import { isNavLinkActive } from '@/lib/docs-path';
+import { resolveDocSidebarGroupPages } from '@/lib/typescript-sdk-nav';
 import { cn } from '@/lib/utils';
 
 type Props = {
@@ -40,7 +41,7 @@ export function DocSidebar({ tab }: Props) {
         <div key={group.group}>
           <p className={cn(docLabel, 'px-2')}>{group.group}</p>
           <ul className="mt-2 flex flex-col gap-px">
-            {group.pages.map((page) => {
+            {resolveDocSidebarGroupPages(tab.id, group).map((page) => {
               const active = isNavLinkActive(pathname, page.href);
               return (
                 <li key={page.href}>

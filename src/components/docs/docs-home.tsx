@@ -1,7 +1,7 @@
 'use client';
 
 import { motion, useReducedMotion } from 'framer-motion';
-import { ArrowRight, Cpu, FileCode, Layers, Rocket } from 'lucide-react';
+import { ArrowRight, Cpu, FileCode, Layers, Package, Rocket } from 'lucide-react';
 import Link from 'next/link';
 
 import { DocsAudienceModal } from '@/components/docs/docs-audience-modal';
@@ -22,6 +22,7 @@ const areaMeta: Record<DocExploreTabId, { icon: typeof Layers; index: string }> 
   paradigm: { icon: Layers, index: '01' },
   'agent-spec': { icon: FileCode, index: '02' },
   runtime: { icon: Cpu, index: '03' },
+  sdks: { icon: Package, index: '04' },
 };
 
 const fadeUp = {

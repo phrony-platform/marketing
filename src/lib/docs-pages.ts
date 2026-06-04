@@ -10,6 +10,15 @@ import { QuickStartPublishDeployRunPage } from '@/components/docs/pages/quick-st
 import { QuickStartSetupRuntimePage } from '@/components/docs/pages/quick-start/setup-runtime';
 import { QuickStartToolBindingPage } from '@/components/docs/pages/quick-start/tool-binding';
 import { QuickStartWriteManifestPage } from '@/components/docs/pages/quick-start/write-manifest';
+import { SdksIndexPage } from '@/components/docs/pages/sdks/sdks-index';
+import { TypeScriptSdkIndexPage } from '@/components/docs/pages/sdks/typescript/typescript-index';
+import { TypeScriptSdkConnectPage } from '@/components/docs/pages/sdks/typescript/typescript-connect';
+import { TypeScriptSdkInstallPage } from '@/components/docs/pages/sdks/typescript/typescript-install';
+import { TypeScriptSdkInteractiveSessionPage } from '@/components/docs/pages/sdks/typescript/typescript-interactive-session';
+import { TypeScriptSdkRunPage } from '@/components/docs/pages/sdks/typescript/typescript-run';
+import { TypeScriptSdkRuntimeClientPage } from '@/components/docs/pages/sdks/typescript/typescript-runtime-client';
+import { TypeScriptSdkUtilitiesPage } from '@/components/docs/pages/sdks/typescript/typescript-utilities';
+import { TypeScriptSdkWorkerPage } from '@/components/docs/pages/sdks/typescript/typescript-worker';
 import { registerRuntimeMdxPages } from '@/lib/runtime-mdx';
 import { registerDocPage } from '@/lib/docs-registry';
 
@@ -104,3 +113,75 @@ registerDocPage({
 
 registerAgentSpecMdxPages();
 registerRuntimeMdxPages();
+
+registerDocPage({
+  slug: 'sdks',
+  title: 'SDKs',
+  description: 'Client libraries for the Phrony runtime over gRPC.',
+  tab: 'sdks',
+  component: SdksIndexPage,
+});
+
+registerDocPage({
+  slug: 'sdks/typescript',
+  title: 'Overview',
+  description: 'The @phrony/sdk client for Node.js — install, run agents, stream sessions, and register workers.',
+  tab: 'sdks',
+  component: TypeScriptSdkIndexPage,
+});
+
+registerDocPage({
+  slug: 'sdks/typescript/install',
+  title: 'Install',
+  description: 'Add @phrony/sdk to your Node.js project.',
+  tab: 'sdks',
+  component: TypeScriptSdkInstallPage,
+});
+
+registerDocPage({
+  slug: 'sdks/typescript/connect',
+  title: 'Connect',
+  description: 'Dial a Phrony runtime with RuntimeClient, Phrony, or low-level helpers.',
+  tab: 'sdks',
+  component: TypeScriptSdkConnectPage,
+});
+
+registerDocPage({
+  slug: 'sdks/typescript/run',
+  title: 'Run agents',
+  description: 'Use Phrony and PhronyAgent to start sessions and wait for completion.',
+  tab: 'sdks',
+  component: TypeScriptSdkRunPage,
+});
+
+registerDocPage({
+  slug: 'sdks/typescript/interactive-session',
+  title: 'Interactive sessions',
+  description: 'Stream RunSessionInteractive events, send user messages, and decide tool approvals.',
+  tab: 'sdks',
+  component: TypeScriptSdkInteractiveSessionPage,
+});
+
+registerDocPage({
+  slug: 'sdks/typescript/worker',
+  title: 'Tool workers',
+  description: 'Register tool handlers on the Work stream with Worker and WorkStream.',
+  tab: 'sdks',
+  component: TypeScriptSdkWorkerPage,
+});
+
+registerDocPage({
+  slug: 'sdks/typescript/runtime-client',
+  title: 'Runtime client',
+  description: 'RuntimeClient unary RPCs for catalog, lifecycle, sessions, and approvals.',
+  tab: 'sdks',
+  component: TypeScriptSdkRuntimeClientPage,
+});
+
+registerDocPage({
+  slug: 'sdks/typescript/utilities',
+  title: 'Utilities',
+  description: 'JSON bytes helpers, agent ref parsing, errors, constants, and proto types.',
+  tab: 'sdks',
+  component: TypeScriptSdkUtilitiesPage,
+});
