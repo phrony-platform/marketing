@@ -7,7 +7,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { PhronyLogo } from '@/components/phrony-logo';
 import { documentationHref } from '@/lib/docs-url';
-import { RUNTIME_GITHUB_URL } from '@/lib/project-urls';
+import { PHRONY_GITHUB_ORG_URL } from '@/lib/project-urls';
 
 const mobileLinkClass =
   'block rounded-md px-2 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted';
@@ -94,7 +94,7 @@ export function SiteHeader() {
 
         <div className="flex shrink-0 items-center gap-1.5 sm:gap-2 md:gap-3">
           <a
-            href={RUNTIME_GITHUB_URL}
+            href={PHRONY_GITHUB_ORG_URL}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex size-9 items-center justify-center rounded-md border border-border bg-transparent text-foreground transition-colors hover:bg-muted"
@@ -173,7 +173,7 @@ export function SiteHeader() {
                 </li>
                 <li>
                   <a
-                    href={RUNTIME_GITHUB_URL}
+                    href={PHRONY_GITHUB_ORG_URL}
                     className={mobileLinkClass}
                     target="_blank"
                     rel="noopener noreferrer"

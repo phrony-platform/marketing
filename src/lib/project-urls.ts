@@ -1,4 +1,5 @@
 /** Public repositories and docs linked from the marketing site. */
+export const PHRONY_GITHUB_ORG_URL = 'https://github.com/phrony-platform';
 export const RUNTIME_GITHUB_URL = 'https://github.com/phrony-platform/runtime';
 export const RUNTIME_GITHUB_REPO = 'phrony-platform/runtime';
 

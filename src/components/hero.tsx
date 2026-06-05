@@ -6,7 +6,7 @@ import { HeroLabels } from '@/components/hero-labels';
 import { HeroManifestIllustration } from '@/components/hero-manifest-illustration';
 import { documentationHref } from '@/lib/docs-url';
 import { heroDescription, heroTitleLines } from '@/lib/hero-title';
-import { RUNTIME_GITHUB_URL } from '@/lib/project-urls';
+import { PHRONY_GITHUB_ORG_URL } from '@/lib/project-urls';
 
 export function Hero() {
   return (
@@ -28,7 +28,7 @@ export function Hero() {
           <div className="mt-9 flex justify-center lg:justify-start">
             <div className="flex w-full max-w-xs flex-col gap-3 sm:inline-flex sm:max-w-none sm:w-auto sm:flex-row sm:flex-nowrap sm:items-center">
               <a
-                href={RUNTIME_GITHUB_URL}
+                href={PHRONY_GITHUB_ORG_URL}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="group inline-flex w-full shrink-0 origin-center items-center justify-center gap-2 rounded-md bg-primary px-6 py-3 text-base font-medium text-primary-foreground shadow-sm transition-colors duration-100 hover:bg-primary/90 motion-reduce:transition-none sm:w-auto sm:justify-start"
