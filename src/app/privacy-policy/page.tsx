@@ -6,7 +6,7 @@ import { MarketingShell } from '@/components/marketing-shell';
 export const metadata: Metadata = {
   title: 'Privacy Policy',
   description:
-    'Phrony Privacy Policy: how we collect and use data, GDPR rights, sub-processors, international transfers, and contact.',
+    'Phrony Privacy Policy: self-hosted runtime data practices, GDPR rights, cookies, retention, and contact.',
 };
 
 export default function PrivacyPolicyPage() {

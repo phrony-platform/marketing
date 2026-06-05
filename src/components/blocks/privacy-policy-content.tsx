@@ -1,5 +1,3 @@
-import Link from 'next/link';
-
 const bodyClass =
   'text-pretty font-sans text-base leading-relaxed text-muted-foreground md:text-lg md:leading-[28px]';
 
@@ -14,245 +12,208 @@ export function PrivacyPolicyContent() {
           Privacy Policy
         </h1>
         <p className="mt-4 text-sm text-muted-foreground">
-          Phrony Labs BV&nbsp;&nbsp;|&nbsp;&nbsp;KVK 42039600
+          Phrony Labs BV&nbsp;&nbsp;|&nbsp;&nbsp;KvK 42039600
         </p>
-        <p className="mt-2 text-sm text-muted-foreground">Last updated: April 2025</p>
+        <p className="mt-2 text-sm text-muted-foreground">Last updated: June 2026</p>
       </header>
 
       <div className="mx-auto mt-12 max-w-4xl space-y-10">
         <section className="space-y-4">
-          <h2 className={h2Class}>1. Who We Are</h2>
+          <h2 className={h2Class}>1. Who we are</h2>
           <div className={`space-y-4 ${bodyClass}`}>
             <p>
               Phrony Labs BV (&quot;Phrony&quot;, &quot;we&quot;, &quot;our&quot;) is the data controller for personal
-              data collected through our website (phrony.com) and, where applicable, as data processor for personal data
-              processed through our platform on behalf of our customers.
+              data collected through our website (phrony.com) and for the limited personal data we hold to manage
+              licensed-software and Enterprise relationships. Phrony Labs BV is registered in the Netherlands under KvK
+              number 42039600.
             </p>
-            <p>Registered in the Netherlands under KVK number 42039600.</p>
             <p>
               Contact:{' '}
               <a
-                href="mailto:privacy@phrony.com"
+                href="mailto:compliance@phrony.com"
                 className="text-foreground underline underline-offset-4 hover:text-primary"
               >
-                privacy@phrony.com
+                compliance@phrony.com
               </a>
             </p>
           </div>
         </section>
 
         <section className="space-y-4">
-          <h2 className={h2Class}>2. What Data We Collect</h2>
+          <h2 className={h2Class}>2. The short version</h2>
+          <p className={bodyClass}>
+            Phrony is an open specification and a self-hosted runtime. The software runs on infrastructure that you
+            control. We do not see your Agents, your traces, or any data your Agents process. The only personal data we
+            hold is what you give us through the website and what we need to manage a software or Enterprise
+            relationship with you. We do not sell personal data, and we do not use anyone&apos;s data to train AI models.
+          </p>
+        </section>
+
+        <section className="space-y-4">
+          <h2 className={h2Class}>3. What we collect</h2>
           <div className="space-y-6">
             <div>
-              <p className={`font-medium text-foreground ${bodyClass}`}>Website visitors:</p>
-              <ul className={`list-decimal space-y-2 pl-6 ${bodyClass}`}>
+              <p className={`font-medium text-foreground ${bodyClass}`}>Website visitors</p>
+              <ul className={`list-disc space-y-2 pl-6 ${bodyClass}`}>
                 <li>
-                  Contact information you provide (name, email, company) when requesting a demo, subscribing to updates,
-                  or contacting us
+                  Contact details you provide (name, email, company) when you request a demo, subscribe to updates, or
+                  contact us.
                 </li>
-                <li>Technical data: IP address, browser type, device type, pages visited, referral source</li>
+                <li>Technical data: IP address, browser type, device type, pages visited, referral source.</li>
+                <li>Cookie data: essential and analytics cookies, as described in section 8.</li>
+              </ul>
+            </div>
+            <div>
+              <p className={`font-medium text-foreground ${bodyClass}`}>Licensed-software and Enterprise contacts</p>
+              <ul className={`list-disc space-y-2 pl-6 ${bodyClass}`}>
                 <li>
-                  Cookie data: analytics and functional cookies (see our{' '}
-                  <Link href="/cookie-policy" className="text-foreground underline underline-offset-4 hover:text-primary">
-                    Cookie Policy
-                  </Link>
-                  )
+                  Account and relationship data for license management and Enterprise engagements: name, email,
+                  organisation, and role of the individuals we deal with.
+                </li>
+                <li>
+                  Billing and contractual records for Enterprise customers, processed through our payment and accounting
+                  providers.
                 </li>
               </ul>
             </div>
             <div>
-              <p className={`font-medium text-foreground ${bodyClass}`}>Platform users (SaaS):</p>
-              <ul className={`list-decimal space-y-2 pl-6 ${bodyClass}`}>
-                <li>Account information: name, email, organisation, role</li>
-                <li>Usage data: sessions run, features used, API calls made</li>
-                <li>
-                  Platform logs: session, run, and step logs generated by AI agents (these may contain personal data
-                  depending on the Customer&apos;s use case)
-                </li>
-                <li>Billing information: processed through our payment provider</li>
-              </ul>
-            </div>
-            <div>
-              <p className={`font-medium text-foreground ${bodyClass}`}>Platform users (self-hosted):</p>
-              <ul className={`list-decimal space-y-2 pl-6 ${bodyClass}`}>
-                <li>Account information for licence management only (name, email, organisation)</li>
-                <li>
-                  We do not collect, access, or process any data from self-hosted deployments. All platform data
-                  remains on the Customer&apos;s infrastructure.
-                </li>
-              </ul>
+              <p className={`font-medium text-foreground ${bodyClass}`}>What we do not collect</p>
+              <p className={bodyClass}>
+                We do not collect, access, or receive any data from your self-hosted Runtime. Your Agents, their
+                execution traces, and any personal data they process stay entirely on your infrastructure. We have no
+                technical means of seeing them.
+              </p>
             </div>
           </div>
         </section>
 
         <section className="space-y-4">
-          <h2 className={h2Class}>3. How We Use Your Data</h2>
-          <p className={bodyClass}>We process personal data for the following purposes:</p>
-          <ol className={`list-decimal space-y-3 pl-6 ${bodyClass}`}>
+          <h2 className={h2Class}>4. How we use it</h2>
+          <ul className={`list-disc space-y-3 pl-6 ${bodyClass}`}>
             <li>
-              Providing and operating the Platform (legal basis: performance of contract, GDPR Article 6(1)(b))
+              To operate the website and respond to enquiries (legal basis: legitimate interest, GDPR Article 6(1)(f), and
+              steps prior to contract, Article 6(1)(b)).
             </li>
-            <li>Account management and customer support (legal basis: performance of contract)</li>
             <li>
-              Billing and invoicing (legal basis: performance of contract and legal obligation, GDPR Article 6(1)(c))
+              To manage software licenses and Enterprise relationships, including support (legal basis: performance of
+              contract, Article 6(1)(b)).
             </li>
-            <li>Product improvement and analytics (legal basis: legitimate interest, GDPR Article 6(1)(f))</li>
-            <li>Marketing communications, only with consent (legal basis: consent, GDPR Article 6(1)(a))</li>
             <li>
-              Compliance with legal obligations, including tax and financial reporting (legal basis: legal obligation)
+              For billing, invoicing, and statutory accounting (legal basis: legal obligation, Article 6(1)(c), and
+              performance of contract).
             </li>
-          </ol>
+            <li>
+              For product and website analytics in aggregate (legal basis: legitimate interest, Article 6(1)(f)).
+            </li>
+            <li>For marketing communications, only with consent (legal basis: consent, Article 6(1)(a)).</li>
+          </ul>
           <p className={bodyClass}>
-            We do not sell personal data. We do not use Customer data to train AI models.
+            We do not sell personal data. We do not use customer or visitor data to train AI models.
           </p>
         </section>
 
         <section className="space-y-4">
-          <h2 className={h2Class}>4. Data Processing on Behalf of Customers</h2>
+          <h2 className={h2Class}>5. Self-hosted deployments</h2>
+          <p className={bodyClass}>
+            For self-hosted use of the Runtime, Phrony is neither a data controller nor a data processor of the data your
+            Agents handle. You are the controller and, as applicable, the processor for all data processed on your own
+            infrastructure. Phrony has no access to it. The only personal data Phrony holds in connection with
+            self-hosted use is the contact and license-management data described in section 3.
+          </p>
+        </section>
+
+        <section className="space-y-4">
+          <h2 className={h2Class}>6. Enterprise processing</h2>
+          <p className={bodyClass}>
+            Where an Enterprise engagement involves Phrony processing personal data on your behalf (for example, in a
+            managed deployment), Phrony acts as a data processor under GDPR Article 28, governed by a separate Data
+            Processing Agreement. We process that data only on your documented instructions and only to provide the
+            agreed service. The current list of sub-processors used in any such engagement is provided as part of the
+            Data Processing Agreement, and you are notified of changes with a minimum 14-day notice period and a right
+            to object on compliance grounds.
+          </p>
+        </section>
+
+        <section className="space-y-4">
+          <h2 className={h2Class}>7. International transfers</h2>
           <div className={`space-y-4 ${bodyClass}`}>
             <p>
-              <span className="font-medium text-foreground">SaaS deployments:</span> When Customers deploy AI agents on
-              our managed platform, Phrony acts as a data processor under GDPR Article 28. We process Customer data
-              solely on the Customer&apos;s instructions and for the purpose of providing the Platform service. A Data
-              Processing Agreement (DPA) governs this relationship.
-            </p>
-            <p>
-              <span className="font-medium text-foreground">Self-hosted deployments:</span> Phrony does not act as a
-              data processor. The Customer is both data controller and processor for all data processed on their own
-              infrastructure. Phrony has no access to Customer data in self-hosted deployments.
+              Phrony is based in the Netherlands (EU) and aims to keep personal data within the European Economic Area.
+              Where personal data we control is transferred outside the EEA, we rely on the EU-US Data Privacy
+              Framework (where the recipient is certified) or on Standard Contractual Clauses approved by the European
+              Commission. Note that for self-hosted use, any transfer of data your Agents process, including calls to LLM
+              providers, is determined and controlled by you, not by Phrony.
             </p>
           </div>
         </section>
 
         <section className="space-y-4">
-          <h2 className={h2Class}>5. Sub-Processors</h2>
-          <p className={bodyClass}>For SaaS deployments, we use the following categories of sub-processors:</p>
-          <ol className={`list-decimal space-y-3 pl-6 ${bodyClass}`}>
-            <li>Cloud infrastructure providers (hosting and compute)</li>
-            <li>LLM providers (as configured by the Customer — e.g., OpenAI, Anthropic, Mistral)</li>
-            <li>Payment processors</li>
-            <li>Analytics tools (anonymised data only)</li>
-          </ol>
+          <h2 className={h2Class}>8. Cookies</h2>
           <p className={bodyClass}>
-            A current list of sub-processors is available at{' '}
-            <Link href="/sub-processors" className="text-foreground underline underline-offset-4 hover:text-primary">
-              phrony.com/sub-processors
-            </Link>{' '}
-            and is updated when changes occur. Customers are notified of new sub-processors with a minimum 14-day notice
-            period and may object if the new sub-processor creates a compliance concern for their use case.
+            The website uses essential cookies (required to function, no consent needed) and analytics cookies (consent
+            required). You can manage analytics cookies through the cookie banner or your browser settings.
           </p>
         </section>
 
         <section className="space-y-4">
-          <h2 className={h2Class}>6. International Data Transfers</h2>
-          <div className={`space-y-4 ${bodyClass}`}>
-            <p>
-              Phrony is based in the Netherlands (EU). We aim to keep all personal data within the European Economic Area
-              (EEA).
-            </p>
-            <p>
-              Where data is transferred outside the EEA (e.g., to LLM providers based in the United States), we rely on:
-            </p>
-            <ol className="list-decimal space-y-2 pl-6">
-              <li>EU-US Data Privacy Framework (where the recipient is certified), or</li>
-              <li>Standard Contractual Clauses (SCCs) approved by the European Commission</li>
-            </ol>
-            <p>
-              For SaaS Enterprise customers, Phrony offers an EU-only processing tier where all data processing,
-              including LLM API calls, is routed through EU-based infrastructure and providers.
-            </p>
-          </div>
-        </section>
-
-        <section className="space-y-4">
-          <h2 className={h2Class}>7. Data Retention</h2>
-          <p className={bodyClass}>We retain personal data only as long as necessary for the purposes described in this policy:</p>
-          <ol className={`list-decimal space-y-3 pl-6 ${bodyClass}`}>
-            <li>Account data: for the duration of the Customer relationship, plus 12 months after account closure</li>
+          <h2 className={h2Class}>9. Retention</h2>
+          <ul className={`list-disc space-y-3 pl-6 ${bodyClass}`}>
             <li>
-              Platform logs (SaaS): retained to operate and secure the service; we do not vary retention by plan
-              tier. Deletion requests and legal obligations may still require retention limits in specific cases.
+              Website enquiry and contact data: kept while the enquiry is active and for a reasonable follow-up period,
+              then deleted.
             </li>
-            <li>Billing records: 7 years (Dutch tax law requirement)</li>
-            <li>Marketing data: until consent is withdrawn</li>
-          </ol>
+            <li>
+              License and Enterprise relationship data: kept for the duration of the relationship plus 12 months after
+              it ends.
+            </li>
+            <li>Billing records: 7 years (Dutch tax-law requirement).</li>
+            <li>Marketing data: until consent is withdrawn.</li>
+          </ul>
           <p className={bodyClass}>
-            Self-hosted customers control their own data retention. Phrony does not retain any data from self-hosted
+            Self-hosted customers control their own data retention entirely. Phrony retains nothing from self-hosted
             deployments.
           </p>
         </section>
 
         <section className="space-y-4">
-          <h2 className={h2Class}>8. Your Rights</h2>
-          <p className={bodyClass}>Under the GDPR, you have the following rights regarding your personal data:</p>
-          <ol className={`list-decimal space-y-3 pl-6 ${bodyClass}`}>
-            <li>Right of access (Article 15) — request a copy of your data</li>
-            <li>Right to rectification (Article 16) — correct inaccurate data</li>
-            <li>Right to erasure (Article 17) — request deletion of your data</li>
-            <li>Right to restrict processing (Article 18)</li>
-            <li>Right to data portability (Article 20) — receive your data in a structured format</li>
-            <li>Right to object (Article 21) — object to processing based on legitimate interest</li>
-            <li>Right to withdraw consent at any time for consent-based processing</li>
-          </ol>
+          <h2 className={h2Class}>10. Your rights</h2>
           <p className={bodyClass}>
-            To exercise any of these rights, contact us at{' '}
+            Under the GDPR you have the rights of access (Art. 15), rectification (Art. 16), erasure (Art. 17),
+            restriction (Art. 18), data portability (Art. 20), and objection (Art. 21), and the right to withdraw
+            consent at any time for consent-based processing. To exercise any of these, contact{' '}
             <a
-              href="mailto:privacy@phrony.com"
+              href="mailto:compliance@phrony.com"
               className="text-foreground underline underline-offset-4 hover:text-primary"
             >
-              privacy@phrony.com
+              compliance@phrony.com
             </a>
             . We will respond within 30 days.
           </p>
         </section>
 
         <section className="space-y-4">
-          <h2 className={h2Class}>9. Security</h2>
+          <h2 className={h2Class}>11. Security</h2>
           <p className={bodyClass}>
-            We implement appropriate technical and organisational measures to protect personal data, including:
+            For the data we do hold, we apply appropriate technical and organisational measures, including encryption in
+            transit (TLS) and at rest, role-based access control, an encrypted secrets vault for any credentials we
+            manage, and regular security assessments. Because self-hosted deployments run on your infrastructure, the
+            security of the data your Agents process is your responsibility.
           </p>
-          <ol className={`list-decimal space-y-2 pl-6 ${bodyClass}`}>
-            <li>Encryption in transit (TLS) and at rest</li>
-            <li>Role-based access control for all platform access</li>
-            <li>Encrypted secrets vault for credentials and API keys</li>
-            <li>Multi-tenancy isolation at the database level</li>
-            <li>Immutable, tamper-resistant audit logging</li>
-            <li>Regular security assessments and vulnerability scanning</li>
-          </ol>
         </section>
 
         <section className="space-y-4">
-          <h2 className={h2Class}>10. Cookies</h2>
+          <h2 className={h2Class}>12. Complaints and contact</h2>
           <div className={`space-y-4 ${bodyClass}`}>
             <p>
-              Our website uses cookies for essential functionality and analytics. We use:
-            </p>
-            <ol className="list-decimal space-y-2 pl-6">
-              <li>Essential cookies: required for the website to function (no consent required)</li>
-              <li>Analytics cookies: to understand how visitors use our website (consent required)</li>
-            </ol>
-            <p>
-              You can manage your cookie preferences at any time through the cookie banner on our website or through your
-              browser settings.
-            </p>
-          </div>
-        </section>
-
-        <section className="space-y-4">
-          <h2 className={h2Class}>11. Data Protection Officer</h2>
-          <div className={`space-y-4 ${bodyClass}`}>
-            <p>For questions or concerns about our data processing practices, contact:</p>
-            <p>
-              Privacy contact:{' '}
+              For any question or concern about our data practices, contact{' '}
               <a
-                href="mailto:privacy@phrony.com"
+                href="mailto:compliance@phrony.com"
                 className="text-foreground underline underline-offset-4 hover:text-primary"
               >
-                privacy@phrony.com
+                compliance@phrony.com
               </a>
+              . Phrony Labs BV, the Netherlands.
             </p>
-            <p>Phrony Labs BV, the Netherlands</p>
             <p>
               You also have the right to lodge a complaint with the Dutch Data Protection Authority (Autoriteit
               Persoonsgegevens) at{' '}
@@ -270,11 +231,10 @@ export function PrivacyPolicyContent() {
         </section>
 
         <section className="space-y-4">
-          <h2 className={h2Class}>12. Changes to This Policy</h2>
+          <h2 className={h2Class}>13. Changes</h2>
           <p className={bodyClass}>
-            We may update this Privacy Policy from time to time. Material changes will be communicated via email or
-            through our website. The &quot;Last updated&quot; date at the top of this policy indicates the most recent
-            revision.
+            We may update this Privacy Policy from time to time. Material changes will be communicated via the website
+            or by email. The &quot;Last updated&quot; date above indicates the most recent revision.
           </p>
         </section>
       </div>
