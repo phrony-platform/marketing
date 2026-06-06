@@ -405,6 +405,7 @@ export const listAgentVersions = `const { versions } = await client.listAgentVer
 export const listSessions = `const { sessions } = await client.listSessions({
   agentRef: { namespace: "default", name: "my-agent", version: "" },
   status: "running",
+  kind: "", // optional: "agent" or "bundle"
 });`;
 
 export const inspectSession = `const { session } = await client.inspectSession({

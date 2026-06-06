@@ -19,13 +19,16 @@ While a session is **running**, **awaiting_tool**, **awaiting_approval**, or **a
 
 ## `sessions ls`
 
-List sessions, optionally filtered by agent or status.
+List sessions, optionally filtered by agent, bundle, or status.
 
 ```bash
-phrony sessions ls [AGENT] [flags]
+phrony sessions ls [TARGET] [flags]
 ```
 
-When `AGENT` is omitted, lists sessions across all agents. When set, `AGENT` is `namespace/name`.
+When `TARGET` is omitted, lists sessions across all agents and bundles. When set:
+
+- **Agent filter (default):** `TARGET` is `namespace/name` (same as [`phrony run`](/docs/runtime/cli/run)).
+- **Bundle filter:** pass `--kind bundle` and `TARGET` is a bundle reference (`namespace/name`, optional `@version` or lock hash).
 
 By default, the listing shows **root** sessions only—runs started directly with `phrony run` or `phrony bundles run`. Sessions created by [agent delegation](/docs/agent-spec/resources/agents) (nested child runs linked via `parent_session_id`) are omitted unless you pass `--include-children`.
 
@@ -35,6 +38,7 @@ By default, the listing shows **root** sessions only—runs started directly wit
 |------|-------------|
 | `--status` | Filter by status: `pending`, `running`, `awaiting_approval`, `awaiting_input`, `completed`, `failed`, `cancelled` |
 | `--include-children` | Include delegated child sessions in the listing (default: root sessions only) |
+| `--kind` | Filter by session kind: `agent` (direct `phrony run`) or `bundle` (`phrony bundles run`). When `bundle`, `TARGET` is parsed as a bundle reference. |
 
 ### Examples
 
@@ -45,11 +49,16 @@ phrony sessions ls demo/echo-agent --status awaiting_input
 phrony sessions ls --status awaiting_approval
 phrony sessions ls --include-children
 phrony sessions ls demo/orchestrator --include-children --status running
+phrony sessions ls --kind bundle demo/delegation-assistant
+phrony sessions ls demo/my-bundle --kind bundle --status completed
 ```
 
 ### Output
 
-Table columns: `ID`, `STATUS`, `UPDATED_AT`, `RESUMABLE` (`yes` when status is `awaiting_input`).
+Table columns: `ID`, `KIND`, `TARGET`, `STATUS`, `UPDATED_AT`, `RESUMABLE` (`yes` when status is `awaiting_input`).
+
+- **`KIND`** — `agent` for direct runs, `bundle` for runs started with [`phrony bundles run`](/docs/runtime/cli/bundle-run).
+- **`TARGET`** — the agent or bundle the session belongs to, as `namespace/name@version` (bundle ref when `KIND` is `bundle`, otherwise the executing agent ref). Delegated child sessions show the specialist agent they run under.
 
 Sessions in **`awaiting_approval`** are waiting on an operator decision. Use [`phrony approvals`](/docs/runtime/cli/approvals) to list and decide pending approvals; see [Human-in-the-loop approvals](/docs/runtime/hitl).
 
