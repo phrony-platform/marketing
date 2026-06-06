@@ -1,0 +1,40 @@
+---
+title: "bundle deploy"
+description: "Activate a published bundle version for sessions."
+---
+
+## Synopsis
+
+```bash
+phrony bundles deploy BUNDLE@VERSION
+```
+
+## Description
+
+Records a **bundle deployment** so the given published version becomes the **active** bundle version for [`bundle run`](/docs/runtime/cli/bundle-run) in this runtime. The version must already exist from [`bundle publish`](/docs/runtime/cli/bundle-publish).
+
+`BUNDLE@VERSION` is `namespace/name@semver` (for example `support/support@1.2.0`) or `namespace/name@sha256:…` to pin by lock hash. Semver is the usual choice; lock hash suits CI pipelines that key off closure bytes.
+
+## Example
+
+```bash
+phrony bundles publish ./support/bundle.yaml
+phrony bundles deploy support.support@1.2.0
+```
+
+On success:
+
+```text
+deployed support/support@1.2.0 (sha256:…) (previous: 1.1.0, sha256:…) at 2026-06-06T12:00:00Z
+```
+
+When there was no previous active version, the `(previous: …)` segment is omitted.
+
+<UpNext>
+  <Card title="bundle run" href="/docs/runtime/cli/bundle-run">
+    Start a session on the active bundle deployment.
+  </Card>
+  <Card title="bundle publish" href="/docs/runtime/cli/bundle-publish">
+    Publish the immutable bundle version first.
+  </Card>
+</UpNext>

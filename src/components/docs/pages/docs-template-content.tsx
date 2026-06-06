@@ -81,8 +81,8 @@ export function DocsTemplateContent() {
         <DocCodeBlock
           language="bash"
           title="terminal"
-          code={`phrony publish ./my-agent/agent.yaml
-phrony deploy demo/my-agent@1.0.0
+          code={`phrony agents publish ./my-agent/agent.yaml
+phrony agents deploy demo/my-agent@1.0.0
 phrony run demo/my-agent`}
         />
 

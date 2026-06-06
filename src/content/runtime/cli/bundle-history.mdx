@@ -1,0 +1,37 @@
+---
+title: "bundle history"
+description: "List bundle deployment activation history."
+---
+
+## Synopsis
+
+```bash
+phrony bundles history BUNDLE
+```
+
+## Description
+
+Lists append-only **bundle deployment** records: each [`bundle deploy`](/docs/runtime/cli/bundle-deploy) activation with semver, lock hash, action, actor, and timestamp.
+
+`BUNDLE` is `namespace/name`.
+
+## Example
+
+```bash
+phrony bundles history demo/payment-desk-hitl
+```
+
+## Output
+
+Table columns: `VERSION` (semver), `LOCK_HASH`, `ACTION`, `ACTOR`, `CREATED_AT`.
+
+The active version is the most recent row.
+
+<UpNext>
+  <Card title="bundle active" href="/docs/runtime/cli/bundle-active">
+    Current active bundle version only.
+  </Card>
+  <Card title="bundle deploy" href="/docs/runtime/cli/bundle-deploy">
+    Activate a published semver or lock hash.
+  </Card>
+</UpNext>

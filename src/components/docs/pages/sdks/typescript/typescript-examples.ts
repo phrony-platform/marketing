@@ -3,7 +3,7 @@
 export const installPackage = `pnpm add @phrony/sdk`;
 
 export const importPaths = `// Full SDK
-import { Phrony, RuntimeClient, Worker } from "@phrony/sdk";
+import { Phrony, PhronyAgent, PhronyBundle, RuntimeClient, Worker } from "@phrony/sdk";
 
 // Worker-only subpath (includes WorkStream)
 import { Worker, WorkStream } from "@phrony/sdk/worker";`;
@@ -92,6 +92,12 @@ export const phronyAgentRef = `const phrony = await Phrony.connect();
 const pinned = phrony.agent("default/my-agent@0.2.0");
 const latest = phrony.agent("default/my-agent");`;
 
+export const phronyBundleRef = `const phrony = await Phrony.connect();
+
+const semver = phrony.bundle("demo/payment-desk@1.0.0");
+const lockHash = phrony.bundle("demo/payment-desk@sha256:abc…");
+const active = phrony.bundle("demo/payment-desk");`;
+
 export const phronyRunWait = `import { Phrony } from "@phrony/sdk";
 
 const phrony = await Phrony.connect();
@@ -128,6 +134,42 @@ for await (const event of session.events()) {
 }
 session.close();`;
 
+export const phronyBundleRunWait = `import { Phrony } from "@phrony/sdk";
+
+const phrony = await Phrony.connect();
+
+const result = await phrony.bundle("demo/payment-desk").run({
+  input: { message: "Pay 500 USD to Acme" },
+  resolvedSecrets: { stripe: process.env.STRIPE_API_KEY },
+});
+
+console.log(result.sessionId, result.output, result.stopReason);
+phrony.close();`;
+
+export const phronyBundleRunNoWait = `import { Phrony } from "@phrony/sdk";
+
+const phrony = await Phrony.connect();
+
+const result = await phrony.bundle("demo/payment-desk").run({
+  input: { message: "Pay 500 USD to Acme" },
+  wait: false,
+});
+
+console.log(result.sessionId, result.status);`;
+
+export const phronyBundleRunInteractive = `import { Phrony } from "@phrony/sdk";
+
+const phrony = await Phrony.connect();
+
+const session = await phrony.bundle("demo/payment-desk").runInteractive({
+  input: { message: "Pay 500 USD to Acme" },
+});
+
+for await (const event of session.events()) {
+  if (event.type === "text_delta") process.stdout.write(event.delta);
+}
+session.close();`;
+
 export const phronyRuntimeClient = `import { Phrony } from "@phrony/sdk";
 
 const phrony = await Phrony.connect();
@@ -143,6 +185,17 @@ session.start({
   agentRef: { namespace: "default", name: "my-agent", version: "" },
   input: { question: "Hello" },
   resolvedSecrets: { openai: process.env.OPENAI_API_KEY },
+});`;
+
+export const interactiveStartBundle = `import { RuntimeClient } from "@phrony/sdk";
+
+const client = await RuntimeClient.connect();
+const session = client.runSessionInteractive();
+
+session.start({
+  bundleRef: { namespace: "demo", name: "payment-desk", version: "" },
+  input: { message: "Pay 500 USD to Acme" },
+  resolvedSecrets: { stripe: process.env.STRIPE_API_KEY },
 });`;
 
 export const interactiveAttach = `session.attach({ sessionId: "sess_abc123" });`;
@@ -245,6 +298,16 @@ const response = await client.runSession({
 
 console.log(response.sessionId, response.status);`;
 
+export const runSessionBundleUnary = `import { jsonBytes, jsonBytesMap } from "@phrony/sdk";
+
+const response = await client.runSession({
+  bundleRef: { namespace: "demo", name: "payment-desk", version: "" },
+  input: jsonBytes({ message: "Pay 500 USD to Acme" }),
+  resolvedSecrets: jsonBytesMap({ stripe: process.env.STRIPE_API_KEY }),
+});
+
+console.log(response.sessionId, response.status);`;
+
 export const publish = `import { readFileSync } from "node:fs";
 
 const manifest = readFileSync("agent.yaml");
@@ -259,6 +322,46 @@ export const deploy = `await client.deploy({
   agentRef: { namespace: "default", name: "my-agent", version: "0.2.0" },
   actor: "ci@example.com",
 });`;
+
+export const publishBundle = `import { readFileSync } from "node:fs";
+
+const bundleManifest = readFileSync("support/bundle.yaml");
+const committedLock = readFileSync("support/bundle.lock.json");
+
+const published = await client.publishBundle({
+  bundleManifest,
+  committedLock,
+  members: [
+  // BundleMemberPackage entries for each vendored closure member
+  ],
+  actor: "ci@example.com",
+});
+
+console.log(published.bundleVersionId, published.lockHash);`;
+
+export const deployBundle = `import { parseBundleRefVersionRequired } from "@phrony/sdk";
+
+await client.deployBundle({
+  bundleRef: parseBundleRefVersionRequired("demo/payment-desk@1.0.0"),
+  actor: "ci@example.com",
+});`;
+
+export const getActiveBundle = `const active = await client.getActiveBundle({
+  bundleRef: { namespace: "demo", name: "payment-desk", version: "" },
+});
+console.log(active.version, active.lockHash);`;
+
+export const listBundles = `const { bundles } = await client.listBundles();
+for (const b of bundles) console.log(b.namespace, b.name);`;
+
+export const listBundleVersions = `const { versions } = await client.listBundleVersions({
+  bundleRef: { namespace: "demo", name: "payment-desk", version: "" },
+});`;
+
+export const listBundleDeployments = `const history = await client.listBundleDeployments({
+  bundleRef: { namespace: "demo", name: "payment-desk", version: "" },
+});
+for (const d of history.deployments) console.log(d.version, d.lockHash, d.deployedAt);`;
 
 export const rollback = `await client.rollback({
   agentRef: { namespace: "default", name: "my-agent", version: "" },
@@ -304,6 +407,12 @@ export const listSessions = `const { sessions } = await client.listSessions({
   status: "running",
 });`;
 
+export const inspectSession = `const { session } = await client.inspectSession({
+  sessionId: "sess_abc123",
+});
+// session.timeline — unified chronological audit view
+// session.children — delegated child sessions (same shape, recursive)`;
+
 export const cancelSession = `await client.cancelSession({ sessionId: "sess_abc123" });`;
 
 export const completeSession = `await client.completeSession({ sessionId: "sess_abc123" });`;
@@ -345,6 +454,35 @@ formatAgentRef({
   name: "my-agent",
   version: "0.2.0",
 }); // "default/my-agent@0.2.0"`;
+
+export const parseBundleRef = `import { parseBundleRef, formatBundleRef } from "@phrony/sdk";
+
+const semver = parseBundleRef("demo/payment-desk@1.0.0");
+// { namespace: "demo", name: "payment-desk", version: "1.0.0" }
+
+const lockHash = parseBundleRef("demo/payment-desk@sha256:abc…");
+formatBundleRef(lockHash); // "demo/payment-desk@sha256:abc…"`;
+
+export const formatBundleRefOnly = `import { formatBundleRef } from "@phrony/sdk";
+
+formatBundleRef({
+  namespace: "demo",
+  name: "payment-desk",
+  version: "1.0.0",
+}); // "demo/payment-desk@1.0.0"`;
+
+export const parseBundleRefVersionRequired = `import { parseBundleRefVersionRequired } from "@phrony/sdk";
+
+// Deploy flows require an explicit @version (semver or lock hash)
+const ref = parseBundleRefVersionRequired("demo/payment-desk@sha256:abc…");`;
+
+export const bundleRefParseError = `import { parseBundleRef, BundleRefParseError } from "@phrony/sdk";
+
+try {
+  parseBundleRef("payment-desk"); // missing namespace/
+} catch (err) {
+  if (err instanceof BundleRefParseError) console.error(err.message);
+}`;
 
 export const jsonBytesExample = `import { jsonBytes, parseJsonBytes, jsonBytesMap } from "@phrony/sdk";
 
@@ -402,13 +540,24 @@ console.log(heartbeatIntervalMs(30_000)); // 15000`;
 
 export const generatedTypes = `import type {
   AgentRef,
+  BundleRef,
+  BundleSummary,
+  BundleVersionSummary,
+  DeployBundleRequest,
+  PublishBundleRequest,
   PublishRequest,
   RunSessionRequest,
   WorkClientMsg,
 } from "@phrony/sdk";
 
-const req: RunSessionRequest = {
+const agentRun: RunSessionRequest = {
   agentRef: { namespace: "default", name: "my-agent", version: "" },
+  input: Buffer.alloc(0),
+  resolvedSecrets: {},
+};
+
+const bundleRun: RunSessionRequest = {
+  bundleRef: { namespace: "demo", name: "payment-desk", version: "" },
   input: Buffer.alloc(0),
   resolvedSecrets: {},
 };`;

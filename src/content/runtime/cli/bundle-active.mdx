@@ -1,0 +1,37 @@
+---
+title: "bundle active"
+description: "Show the active deployed version for a bundle."
+---
+
+## Synopsis
+
+```bash
+phrony bundles active BUNDLE
+```
+
+## Description
+
+Prints the semver and lock hash currently activated for bundle sessions in this runtime — the latest [`bundle deploy`](/docs/runtime/cli/bundle-deploy) — plus when it was activated and by whom.
+
+`BUNDLE` is `namespace/name`.
+
+## Example
+
+```bash
+phrony bundles active demo/payment-desk-hitl
+```
+
+Example output:
+
+```text
+demo/payment-desk-hitl@1.0.0 (sha256:abc123…) deployed 2026-05-31T12:00:00Z by ci@github
+```
+
+<UpNext>
+  <Card title="bundle deploy" href="/docs/runtime/cli/bundle-deploy">
+    Change the active bundle version.
+  </Card>
+  <Card title="bundle run" href="/docs/runtime/cli/bundle-run">
+    Execute the active bundle deployment in a new session.
+  </Card>
+</UpNext>

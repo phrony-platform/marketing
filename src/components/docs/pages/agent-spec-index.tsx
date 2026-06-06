@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import { Bot, KeyRound, Link2, Server, ShieldCheck, Wrench } from 'lucide-react';
+import { Bot, KeyRound, Link2, Package, Server, ShieldCheck, Workflow, Wrench } from 'lucide-react';
 
 import { DocCard, DocCardGroup, DocPage, DocParagraph, DocProse } from '@/components/docs';
 import { docLabel } from '@/components/docs/doc-style';
@@ -12,6 +12,8 @@ const agentSpecPageIcons: Record<string, LucideIcon> = {
   '/docs/agent-spec/resources/tool': Wrench,
   '/docs/agent-spec/resources/policy': ShieldCheck,
   '/docs/agent-spec/resources/tools': Link2,
+  '/docs/agent-spec/resources/bundle': Package,
+  '/docs/agent-spec/resources/agents': Workflow,
   '/docs/agent-spec/resources/mcp-servers': Server,
 };
 

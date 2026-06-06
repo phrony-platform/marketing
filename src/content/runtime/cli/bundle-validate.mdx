@@ -1,0 +1,50 @@
+---
+title: "bundle validate"
+description: "Validate a bundle closure locally and compare against bundle.lock.json."
+---
+
+## Synopsis
+
+```bash
+phrony bundles validate BUNDLE [--require-lock]
+```
+
+## Description
+
+Parses the Bundle manifest (including required `metadata.version` semver) and runs the [closure walk](/docs/agent-spec/resources/bundle#closure-walk) locally. Does **not** publish anything.
+
+Vendored-only bundles never contact the runtime. When the closure includes [pinned external](/docs/agent-spec/resources/agents#ref-kinds) refs, validation resolves external `content_hash` values from the catalog (same [`--runtime-addr`](/docs/runtime/cli#global-flags) / `PHRONY_RUNTIME_ADDR` contract as [`bundle lock`](/docs/runtime/cli/bundle-lock)) before comparing the lock.
+
+When `bundle.lock.json` exists beside the bundle, validation compares the committed lock to the recomputed closure and fails on drift with an actionable message—re-run [`bundle lock`](/docs/runtime/cli/bundle-lock) (with `--runtime-addr` when externals are present).
+
+| Flag | Effect |
+|------|--------|
+| `--require-lock` | Fail when `bundle.lock.json` is missing (recommended for CI) |
+
+Without `--require-lock`, validation still passes when no lock exists (first-time authoring).
+
+Validation also checks the **secret union** across closure members. If two members declare the same secret name with different `fromEnv` values, validation fails (same rule as [`bundle lock`](/docs/runtime/cli/bundle-lock) and publish). Unset `fromEnv` variables on vendored members still produce warnings only.
+
+Passing a bundle manifest to [`phrony agents validate`](/docs/runtime/cli/validate) fails with a hint to use `phrony bundles validate` instead.
+
+## Example
+
+```bash
+phrony bundles validate ./support/bundle.yaml --require-lock
+```
+
+On success:
+
+```text
+valid: support/support sha256:…
+members: 3 (root: orchestrator)
+```
+
+<UpNext>
+  <Card title="bundle lock" href="/docs/runtime/cli/bundle-lock">
+    Regenerate the lock after closure changes.
+  </Card>
+  <Card title="bundle publish" href="/docs/runtime/cli/bundle-publish">
+    Publish after validation passes.
+  </Card>
+</UpNext>

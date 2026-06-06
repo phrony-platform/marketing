@@ -1,0 +1,37 @@
+---
+title: "bundle versions"
+description: "List published versions for a bundle."
+---
+
+## Synopsis
+
+```bash
+phrony bundles versions BUNDLE
+```
+
+## Description
+
+Lists immutable bundle versions published for one bundle. `BUNDLE` is `namespace/name`.
+
+Publishing does not imply the version is active for sessions — check [`bundle active`](/docs/runtime/cli/bundle-active) or [`bundle history`](/docs/runtime/cli/bundle-history).
+
+Each version has a **semver** label (`metadata.version` at publish) and a **lock hash** (`sha256:…`) from the committed lockfile. Deploy and run accept either form in `@version`.
+
+## Example
+
+```bash
+phrony bundles versions demo/payment-desk-hitl
+```
+
+## Output
+
+Table columns: `VERSION` (semver), `LOCK_HASH`, `ID`, `PUBLISHED_AT`.
+
+<UpNext>
+  <Card title="bundle publish" href="/docs/runtime/cli/bundle-publish">
+    Add a new immutable bundle version.
+  </Card>
+  <Card title="bundle deploy" href="/docs/runtime/cli/bundle-deploy">
+    Activate a published semver or lock hash for sessions.
+  </Card>
+</UpNext>

@@ -27,7 +27,7 @@ export function SdksIndexPage() {
     >
       <DocProse>
         <DocParagraph>
-          Phrony SDKs wrap the runtime gRPC API so you can run agents, stream interactive sessions, and register tool
+          Phrony SDKs wrap the runtime gRPC API so you can run agents and bundles, stream interactive sessions, and register tool
           workers from your application code. The contract matches the{' '}
           <Link href="/docs/runtime" className="text-foreground underline underline-offset-4 hover:no-underline">
             runtime
@@ -39,8 +39,9 @@ export function SdksIndexPage() {
         <DocH2>Available SDKs</DocH2>
         <DocParagraph>
           TypeScript (<code>@phrony/sdk</code>) is the reference client for Node.js 18+. Additional language SDKs may
-          follow the same surface: a high-level <code>Phrony</code> facade, a <code>RuntimeClient</code> for full RPC
-          access, and a <code>Worker</code> helper for tool bindings.
+          follow the same surface: a high-level <code>Phrony</code> facade with <code>PhronyAgent</code> and{' '}
+          <code>PhronyBundle</code> handles, a <code>RuntimeClient</code> for full RPC access, and a <code>Worker</code>{' '}
+          helper for tool bindings.
         </DocParagraph>
       </DocProse>
 

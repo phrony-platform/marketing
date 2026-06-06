@@ -13,7 +13,7 @@ An **Agent** is the declarative definition of one runnable agent. It has three p
 
 <AgentPartsIllustration />
 
-Tool contracts, policies, and bindings are separate kinds—see [Tool](/docs/agent-spec/resources/tool), [Policy](/docs/agent-spec/resources/policy), and [Tool bindings](/docs/agent-spec/resources/tools). How tool implementations connect to the runtime is not a manifest kind; see [Application workers](/docs/runtime/tool-workers).
+Tool contracts, policies, and bindings are separate kinds—see [Tool](/docs/agent-spec/resources/tool), [Policy](/docs/agent-spec/resources/policy), and [Tool bindings](/docs/agent-spec/resources/tools). Multi-agent delegation via `spec.agents` is valid only inside a published [Bundle](/docs/agent-spec/resources/bundle)—see [Agent delegation](/docs/agent-spec/resources/agents). How tool implementations connect to the runtime is not a manifest kind; see [Application workers](/docs/runtime/tool-workers).
 
 When published, the Agent is represented as a **resolved snapshot**: every `ref` (to a prompt, a schema, a tool) is followed and its content is pasted inline, then frozen. The runtime keeps that frozen copy, so the agent runs identically even if the original files on your laptop change later. `spec.limits` and `output` declare run-wide caps and response validation. For how agents fit the broader paradigm, see [The paradigm](/docs/paradigm/the-paradigm).
 
@@ -309,6 +309,7 @@ Apply across the **entire run** (all steps and completions), not per individual 
 | `max_loop_iterations` | integer | No | Tool-calling loop steps before forced stop |
 | `max_wall_clock_seconds` | integer | No | Wall-clock budget for the run (includes tool wait time) |
 | `max_hitl_wait_minutes` | integer | No | Separate budget for approval waits; distinct from `max_wall_clock_seconds` |
+| `max_subagent_depth` | integer | No | Maximum [agent delegation](/docs/agent-spec/resources/agents#depth-limit) nesting; `>= 1`, defaults to `5` |
 | `on_limit` | string | No | `halt` (default) or `escalate` when a limit is hit |
 
 `escalate` routes limit breaches to a [Policy](/docs/agent-spec/resources/policy) with `decision.type: escalate` or `require_approval` that matches `phrony.dispatch.trigger: limit:escalate` (for example via `default_policies`).
@@ -320,6 +321,7 @@ Tool **bindings** and policy references live on the Agent; rules are authored as
 | Topic | Chapter |
 |-------|---------|
 | `spec.tools` bindings | [Tool bindings](/docs/agent-spec/resources/tools) |
+| `spec.agents` delegation | [Agent delegation](/docs/agent-spec/resources/agents) (requires a [Bundle](/docs/agent-spec/resources/bundle)) |
 | `spec.mcp_servers` | [MCP servers](/docs/agent-spec/resources/mcp-servers) |
 | `kind: Tool` contracts | [Tool](/docs/agent-spec/resources/tool) |
 | `kind: Policy` decisions | [Policy](/docs/agent-spec/resources/policy) |
@@ -374,10 +376,10 @@ weather-assistant/
 ```
 
 <UpNext>
+  <Card title="Bundle" href="/docs/agent-spec/resources/bundle">
+    Multi-agent packaging—closure, lockfile, and publish flow.
+  </Card>
   <Card title="Conventions" href="/docs/agent-spec/conventions">
     Ref paths, bundle layout, publish, deploy, and semver rules.
-  </Card>
-  <Card title="Secrets" href="/docs/agent-spec/resources/secrets">
-    Provider credentials, fromEnv references, and run-time resolution.
   </Card>
 </UpNext>

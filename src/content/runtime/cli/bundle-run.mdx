@@ -1,0 +1,93 @@
+---
+title: "bundle run"
+description: "Start a session for a deployed bundle's root agent."
+---
+
+## Synopsis
+
+```bash
+phrony bundles run BUNDLE[@VERSION] [flags]
+```
+
+## Description
+
+<Note>
+  **A session is one execution of the bundle's root agent** — one conversation/run from start to finish. By default `bundles run` is **detached**: the runtime does the work in the background and hands you a session id to check on later. Add `--attach` to start in the background **and** open a foreground view on the same session.
+</Note>
+
+Starts a new runtime **session** for the root member of a published [Bundle](/docs/agent-spec/resources/bundle).
+
+`BUNDLE` is `namespace/name` (for example `support/support`). With no version suffix, the runtime uses the **active bundle deployment** from the latest [`bundle deploy`](/docs/runtime/cli/bundle-deploy).
+
+You may pass an explicit semver (`BUNDLE@1.2.0`) or lock hash (`BUNDLE@sha256:…`). The version must be the **active** bundle deployment. Nested delegation inside the bundle uses frozen `agent_version_id` values compiled at publish time.
+
+By default, `phrony bundles run` calls the runtime in **detached** mode: the daemon runs the session in the background, prints the new session id, and the CLI exits. Use [`sessions attach`](/docs/runtime/cli/sessions#sessions-attach) when the session reaches `awaiting_input`, or pass `--attach` / `-a` to start the session and attach in one command.
+
+With **`--attach`**, the CLI calls `RunSession` (background driver) and then `RunSessionInteractive` with only the session id. **Ctrl+C detaches** from the stream; the session keeps running until it finishes or you [`sessions cancel`](/docs/runtime/cli/sessions#sessions-cancel). **Ctrl+D** still ends the interactive stream when you are at a prompt. Multiple terminals can attach to the same running session.
+
+Secret resolution uses the **union** of `fromEnv` requirements across all frozen closure members in the deployed bundle. The CLI fetches that list from the runtime (same source as [`bundles secret-requirements`](/docs/runtime/cli/bundle-secret-requirements)), then reads values from your environment or `--env-file`. Each agent still declares only the secrets it uses; the root run supplies the full union once into the bundle secret pool shared by nested sessions.
+
+## Flags
+
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--input` | | Session input as a JSON object string |
+| `--attach` | `-a` | Start in the background and attach an interactive view |
+| `--env-file` | `-e` | Load environment variables from a file before resolving secrets (repeatable) |
+
+## Examples
+
+Detached run (default):
+
+```bash
+phrony bundles deploy support.support@1.2.0
+export OPENAI_API_KEY="sk-..."
+export ANTHROPIC_API_KEY="sk-..."
+phrony bundles run support.support
+```
+
+Inspect required secrets before running:
+
+```bash
+phrony bundles secret-requirements support.support
+```
+
+Start in the background and attach:
+
+```bash
+phrony bundles run support.support --attach
+```
+
+With JSON input:
+
+```bash
+phrony bundles run support.support --input '{"message":"hello"}'
+```
+
+## Output
+
+**Detached (default):** one line with the new session id and status, for example `session sess_abc123 started (status: running)`. Resume later with [`sessions attach`](/docs/runtime/cli/sessions#sessions-attach) when status is `awaiting_input`.
+
+**Attached (`--attach`):** the CLI streams session events: session started, assistant text, awaiting input (when applicable), then completion, failure, or cancellation. When stdin and stdout are TTYs, an interactive terminal UI is used; otherwise output is plain text. **Ctrl+C** closes your view only; use **`phrony sessions cancel`** to stop execution.
+
+## Human-in-the-loop (approval required)
+
+When a policy requires approval before dispatch, the session moves to **`awaiting_approval`** and the runtime records a pending approval. No worker is invoked until an operator decides.
+
+**Detached runs** (`phrony bundles run` without `--attach`) pause in the background. Approve or reject from another terminal with [`phrony approvals`](/docs/runtime/cli/approvals); the session resumes without holding the interactive stream open.
+
+**Attached runs** (`--attach`) print an `approval_required` event on stderr. You may detach with **Ctrl+C** and decide from another terminal with [`phrony approvals approve`](/docs/runtime/cli/approvals#approvals-approve) or [`reject`](/docs/runtime/cli/approvals#approvals-reject) (recommended), or send `tool_approval` on the same gRPC stream if your client implements it.
+
+See [Human-in-the-loop approvals](/docs/runtime/hitl) for quorum, comprehension, timeouts, and recovery after a runtime restart.
+
+<UpNext>
+  <Card title="bundle secret-requirements" href="/docs/runtime/cli/bundle-secret-requirements">
+    Inspect fromEnv requirements for a deployed bundle.
+  </Card>
+  <Card title="bundle deploy" href="/docs/runtime/cli/bundle-deploy">
+    Activate a bundle version before running sessions.
+  </Card>
+  <Card title="sessions" href="/docs/runtime/cli/sessions">
+    List, inspect, attach to, and cancel sessions.
+  </Card>
+</UpNext>

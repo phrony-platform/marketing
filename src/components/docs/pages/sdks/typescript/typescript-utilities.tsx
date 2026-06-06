@@ -7,13 +7,26 @@ export function TypeScriptSdkUtilitiesPage() {
   return (
     <DocPage
       title="Utilities"
-      description="Agent references, JSON bytes helpers, errors, constants, and proto types."
+      description="Agent and bundle references, JSON bytes helpers, errors, constants, and proto types."
       eyebrow={TYPESCRIPT_EYEBROW}
     >
       <DocProse>
         <DocH2>Agent references</DocH2>
         <MethodExample name="parseAgentRef(string)" code={ex.parseAgentRef} />
         <MethodExample name="formatAgentRef(ref)" code={ex.formatAgentRefOnly} />
+
+        <DocH2>Bundle references</DocH2>
+        <MethodExample
+          name="parseBundleRef(string)"
+          description="Version may be semver or a lock hash (sha256:…)."
+          code={ex.parseBundleRef}
+        />
+        <MethodExample name="formatBundleRef(ref)" code={ex.formatBundleRefOnly} />
+        <MethodExample
+          name="parseBundleRefVersionRequired(string)"
+          description="Same as parseBundleRef but rejects empty @version — use for deployBundle."
+          code={ex.parseBundleRefVersionRequired}
+        />
 
         <DocH2>JSON bytes</DocH2>
         <MethodExample
@@ -27,6 +40,7 @@ export function TypeScriptSdkUtilitiesPage() {
         <MethodExample name="wrapRpcError(action, err)" code={ex.wrapRpcError} />
         <MethodExample name="AgentSessionError" code={ex.agentSessionError} />
         <MethodExample name="AgentRefParseError" code={ex.agentRefParseError} />
+        <MethodExample name="BundleRefParseError" code={ex.bundleRefParseError} />
         <MethodExample name="ToolError" code={ex.workerToolError} />
 
         <DocH2>Constants and helpers</DocH2>
@@ -44,9 +58,10 @@ export function TypeScriptSdkUtilitiesPage() {
 
         <DocH3>Commonly used types</DocH3>
         <DocParagraph>
-          <code>AgentRef</code>, <code>Approval</code>, <code>ApprovalDecision</code>, <code>PublishRequest</code>,{' '}
-          <code>DeployRequest</code>, <code>RunSessionRequest</code>, <code>WorkClientMsg</code>,{' '}
-          <code>RunSessionInteractiveClientMsg</code>
+          <code>AgentRef</code>, <code>BundleRef</code>, <code>Approval</code>, <code>ApprovalDecision</code>,{' '}
+          <code>PublishRequest</code>, <code>PublishBundleRequest</code>, <code>DeployRequest</code>,{' '}
+          <code>DeployBundleRequest</code>, <code>BundleSummary</code>, <code>BundleVersionSummary</code>,{' '}
+          <code>RunSessionRequest</code>, <code>WorkClientMsg</code>, <code>RunSessionInteractiveClientMsg</code>
         </DocParagraph>
       </DocProse>
     </DocPage>

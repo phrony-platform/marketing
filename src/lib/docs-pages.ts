@@ -125,7 +125,7 @@ registerDocPage({
 registerDocPage({
   slug: 'sdks/typescript',
   title: 'Overview',
-  description: 'The @phrony/sdk client for Node.js — install, run agents, stream sessions, and register workers.',
+  description: 'The @phrony/sdk client for Node.js — install, run agents and bundles, stream sessions, and register workers.',
   tab: 'sdks',
   component: TypeScriptSdkIndexPage,
 });
@@ -148,8 +148,8 @@ registerDocPage({
 
 registerDocPage({
   slug: 'sdks/typescript/run',
-  title: 'Run agents',
-  description: 'Use Phrony and PhronyAgent to start sessions and wait for completion.',
+  title: 'Run agents & bundles',
+  description: 'Use Phrony, PhronyAgent, and PhronyBundle to start sessions and wait for completion.',
   tab: 'sdks',
   component: TypeScriptSdkRunPage,
 });
@@ -173,7 +173,7 @@ registerDocPage({
 registerDocPage({
   slug: 'sdks/typescript/runtime-client',
   title: 'Runtime client',
-  description: 'RuntimeClient unary RPCs for catalog, lifecycle, sessions, and approvals.',
+  description: 'RuntimeClient unary RPCs for agent and bundle lifecycle, sessions, approvals, and catalog.',
   tab: 'sdks',
   component: TypeScriptSdkRuntimeClientPage,
 });
@@ -181,7 +181,7 @@ registerDocPage({
 registerDocPage({
   slug: 'sdks/typescript/utilities',
   title: 'Utilities',
-  description: 'JSON bytes helpers, agent ref parsing, errors, constants, and proto types.',
+  description: 'JSON bytes helpers, agent and bundle ref parsing, errors, constants, and proto types.',
   tab: 'sdks',
   component: TypeScriptSdkUtilitiesPage,
 });

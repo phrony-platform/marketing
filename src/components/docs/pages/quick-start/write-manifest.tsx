@@ -169,7 +169,7 @@ export function QuickStartWriteManifestPage() {
         <DocParagraph>
           Run a local sanity check on the manifest you wrote—you do not need your API key in the shell yet:
         </DocParagraph>
-        <DocCodeBlock language="bash" title="terminal" code="phrony validate ./my-agent/agent.yaml" />
+        <DocCodeBlock language="bash" title="terminal" code="phrony agents validate ./my-agent/agent.yaml" />
         <DocParagraph>
           Fix anything the command reports. In the next step you will send this file to the runtime and talk to your
           agent. See{' '}
@@ -177,7 +177,7 @@ export function QuickStartWriteManifestPage() {
             href="/docs/runtime/cli/validate"
             className="text-foreground underline underline-offset-4 hover:no-underline"
           >
-            phrony validate
+            phrony agents validate
           </Link>{' '}
           for details.
         </DocParagraph>

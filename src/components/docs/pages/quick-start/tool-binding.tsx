@@ -137,9 +137,9 @@ export function QuickStartToolBindingPage() {
         <DocCodeBlock
           language="bash"
           title="terminal"
-          code={`phrony validate ./my-agent/agent.yaml
-phrony publish ./my-agent/agent.yaml
-phrony deploy default/my-agent@0.2.0`}
+          code={`phrony agents validate ./my-agent/agent.yaml
+phrony agents publish ./my-agent/agent.yaml
+phrony agents deploy default/my-agent@0.2.0`}
         />
         <DocParagraph>Bump metadata.version whenever you publish a changed manifest.</DocParagraph>
 

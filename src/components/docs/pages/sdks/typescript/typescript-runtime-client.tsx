@@ -18,7 +18,7 @@ export function TypeScriptSdkRuntimeClientPage() {
   return (
     <DocPage
       title="Runtime client"
-      description="RuntimeClient unary RPCs for catalog, lifecycle, sessions, and approvals."
+      description="RuntimeClient unary RPCs for agent and bundle lifecycle, sessions, approvals, and catalog."
       eyebrow={TYPESCRIPT_EYEBROW}
     >
       <DocProse>
@@ -44,14 +44,24 @@ export function TypeScriptSdkRuntimeClientPage() {
         <MethodExample name="getVersion(request?)" code={ex.getVersion} />
         <MethodExample
           name="runSession(request)"
-          description="Unary session start. Encode input and secrets with jsonBytes / jsonBytesMap."
+          description="Unary session start. Set agentRef or bundleRef (mutually exclusive). Encode input and secrets with jsonBytes / jsonBytesMap."
           code={ex.runSessionUnary}
         />
+        <MethodExample
+          name="runSession({ bundleRef })"
+          description="Start a session on a deployed bundle root member."
+          code={ex.runSessionBundleUnary}
+        />
         <MethodExample name="listSessions(request)" code={ex.listSessions} />
+        <MethodExample
+          name="inspectSession(request)"
+          description="Full persisted session dump: history, timeline, invocations, approvals, and delegated children."
+          code={ex.inspectSession}
+        />
         <MethodExample name="cancelSession(request)" code={ex.cancelSession} />
         <MethodExample name="completeSession(request)" code={ex.completeSession} />
 
-        <DocH2>Publish and deploy</DocH2>
+        <DocH2>Publish and deploy — agents</DocH2>
         <MethodExample name="publish(request)" description="manifest is the raw agent.yaml bytes." code={ex.publish} />
         <MethodExample name="deploy(request)" code={ex.deploy} />
         <MethodExample name="rollback(request)" code={ex.rollback} />
@@ -62,9 +72,35 @@ export function TypeScriptSdkRuntimeClientPage() {
         <MethodExample name="deprecateAgentVersion(request)" code={ex.deprecateAgentVersion} />
         <MethodExample name="archiveAgent(request)" code={ex.archiveAgent} />
 
+        <DocH2>Publish and deploy — bundles</DocH2>
+        <DocParagraph>
+          Bundle lifecycle RPCs mirror the CLI{' '}
+          <Link
+            href="/docs/runtime/cli/bundle"
+            className="text-foreground underline underline-offset-4 hover:no-underline"
+          >
+            bundles
+          </Link>{' '}
+          commands. Publish requires the committed <code>bundle.lock.json</code> bytes alongside the bundle manifest.
+        </DocParagraph>
+        <MethodExample
+          name="publishBundle(request)"
+          description="bundleManifest and committedLock are raw bytes; members lists vendored closure packages."
+          code={ex.publishBundle}
+        />
+        <MethodExample
+          name="deployBundle(request)"
+          description="bundleRef must include @version — use parseBundleRefVersionRequired for deploy-by-hash."
+          code={ex.deployBundle}
+        />
+        <MethodExample name="getActiveBundle(request)" code={ex.getActiveBundle} />
+        <MethodExample name="listBundleDeployments(request)" code={ex.listBundleDeployments} />
+
         <DocH2>Catalog</DocH2>
         <MethodExample name="listAgents(request?)" code={ex.listAgents} />
         <MethodExample name="listAgentVersions(request)" code={ex.listAgentVersions} />
+        <MethodExample name="listBundles(request?)" code={ex.listBundles} />
+        <MethodExample name="listBundleVersions(request)" code={ex.listBundleVersions} />
 
         <DocH2>Approvals</DocH2>
         <MethodExample name="getApproval(request)" code={ex.getApproval} />

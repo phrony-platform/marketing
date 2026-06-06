@@ -21,7 +21,7 @@ An agent goes through the same short journey every time, and most commands map t
 
     ```bash
     phrony init ./weather-assistant
-    phrony validate ./weather-assistant/agent.yaml
+    phrony agents validate ./weather-assistant/agent.yaml
     ```
   </Step>
   <Step title="Publish (freeze a version)">
@@ -29,7 +29,7 @@ An agent goes through the same short journey every time, and most commands map t
 
     ```bash
     export ANTHROPIC_API_KEY="sk-..."
-    phrony publish ./weather-assistant/agent.yaml
+    phrony agents publish ./weather-assistant/agent.yaml
     # → weather/weather-assistant 2.4.0 stored (not runnable until deploy)
     ```
   </Step>
@@ -37,7 +37,7 @@ An agent goes through the same short journey every time, and most commands map t
     `deploy` flips a switch: this published version is now the **active** one that new runs will use. `rollback` flips it back to an earlier version.
 
     ```bash
-    phrony deploy weather/weather-assistant@2.4.0
+    phrony agents deploy weather/weather-assistant@2.4.0
     phrony rollback weather/weather-assistant   # optional: back to previous active
     ```
   </Step>
@@ -102,12 +102,12 @@ flowchart LR
 
 | Step | CLI | Runnable? |
 |------|-----|-----------|
-| Author locally | [`init`](/docs/runtime/cli/init), [`validate`](/docs/runtime/cli/validate), [`diff`](/docs/runtime/cli/diff) | — |
-| Publish immutable version | [`publish`](/docs/runtime/cli/publish) | No |
-| Activate for sessions | [`deploy`](/docs/runtime/cli/deploy) | Yes (when active) |
+| Author locally | [`init`](/docs/runtime/cli/init), [`agents validate`](/docs/runtime/cli/validate), [`agents diff`](/docs/runtime/cli/diff) | — |
+| Publish immutable version | [`agents publish`](/docs/runtime/cli/publish) | No |
+| Activate for sessions | [`agents deploy`](/docs/runtime/cli/deploy) | Yes (when active) |
 | Execute | [`run`](/docs/runtime/cli/run) | Uses **active** deployment only |
 | Roll back activation | [`rollback`](/docs/runtime/cli/rollback) | — |
-| Retire / deprecate version | [`retire`](/docs/runtime/cli/retire), [`deprecate`](/docs/runtime/cli/deprecate) | Blocked for new sessions |
+| Retire / deprecate version | [`agents retire`](/docs/runtime/cli/retire), [`agents deprecate`](/docs/runtime/cli/deprecate) | Blocked for new sessions |
 
 **Publish** validates the bundle, resolves refs, and stores an immutable agent version (ref-only `secrets` when declared). **Deploy** appends an activation record so that version becomes the **active** one for [`run`](/docs/runtime/cli/run). **Run** resolves secret values per session when needed. Published-but-not-deployed versions exist in the registry but cannot be executed.
 
@@ -125,21 +125,46 @@ Publish, deploy, and rollback record an **actor** for audit. Set `PHRONY_ACTOR` 
 |---------|-----------------|---------|
 | [`init`](/docs/runtime/cli/init) | No | Scaffold `agent.yaml` |
 | [`status`](/docs/runtime/cli/status) | Yes | Runtime health and version |
-| [`validate`](/docs/runtime/cli/validate) | No | Validate a manifest locally |
-| [`diff`](/docs/runtime/cli/diff) | Yes | Diff local manifest against a published version |
-| [`publish`](/docs/runtime/cli/publish) | Yes | Publish manifest bundle (immutable version; ref-only [`secrets`](/docs/agent-spec/resources/secrets)) |
-| [`versions`](/docs/runtime/cli/versions) | Yes | List published versions for an agent |
-| [`inspect`](/docs/runtime/cli/inspect) | Yes | Metadata for a published version |
-| [`deprecate`](/docs/runtime/cli/deprecate) | Yes | Mark a version as not runnable |
-| [`retire`](/docs/runtime/cli/retire) | Yes | Retire a published version |
-| [`deploy`](/docs/runtime/cli/deploy) | Yes | Activate a published version for sessions |
-| [`active`](/docs/runtime/cli/active) | Yes | Show the active deployed version |
-| [`history`](/docs/runtime/cli/history) | Yes | Deployment activation history |
 | [`rollback`](/docs/runtime/cli/rollback) | Yes | Roll back to a previous active version |
 | [`run`](/docs/runtime/cli/run) | Yes | Start a new session (active deployment; no credentials on CLI) |
 | [`sessions`](/docs/runtime/cli/sessions) | Yes | List, inspect, attach to, and cancel sessions |
 | [`approvals`](/docs/runtime/cli/approvals) | Yes | List, inspect, and decide pending tool approvals (out of band) |
-| [`agents`](/docs/runtime/cli/agents) | Yes | List agents and archive |
+| [`agents`](/docs/runtime/cli/agents) | Mixed | Agent manifest and registry lifecycle (see subcommands below) |
+| [`bundles`](/docs/runtime/cli/bundle) | Mixed | Multi-agent bundle lifecycle (see subcommands below) |
+
+### Agent commands (`agents`)
+
+| Command | Server required | Summary |
+|---------|-----------------|---------|
+| [`agents validate`](/docs/runtime/cli/validate) | No | Validate an agent manifest locally |
+| [`agents diff`](/docs/runtime/cli/diff) | Yes | Diff local manifest against a published version |
+| [`agents publish`](/docs/runtime/cli/publish) | Yes | Publish manifest (immutable version; ref-only [`secrets`](/docs/agent-spec/resources/secrets)) |
+| [`agents versions`](/docs/runtime/cli/versions) | Yes | List published versions for an agent |
+| [`agents inspect`](/docs/runtime/cli/inspect) | Yes | Metadata for a published version |
+| [`agents deprecate`](/docs/runtime/cli/deprecate) | Yes | Mark a version as not runnable |
+| [`agents retire`](/docs/runtime/cli/retire) | Yes | Retire a published version |
+| [`agents deploy`](/docs/runtime/cli/deploy) | Yes | Activate a published version for sessions |
+| [`agents active`](/docs/runtime/cli/active) | Yes | Show the active deployed version |
+| [`agents history`](/docs/runtime/cli/history) | Yes | Deployment activation history |
+| [`agents ls`](/docs/runtime/cli/agents) | Yes | List agents |
+| [`agents archive`](/docs/runtime/cli/agents) | Yes | Archive an agent |
+
+### Bundle commands (`bundles`)
+
+Multi-agent closures use [`kind: Bundle`](/docs/agent-spec/resources/bundle). See [`bundles`](/docs/runtime/cli/bundle) for the full command reference.
+
+| Command | Server required | Summary |
+|---------|-----------------|---------|
+| [`bundles ls`](/docs/runtime/cli/bundle) | Yes | List bundles registered in the runtime |
+| [`bundles lock`](/docs/runtime/cli/bundle-lock) | No | Walk closure and write `bundle.lock.json` |
+| [`bundles validate`](/docs/runtime/cli/bundle-validate) | No | Validate closure; compare lock when present |
+| [`bundles publish`](/docs/runtime/cli/bundle-publish) | Yes | Verify committed lock and publish immutable bundle version (semver + lock hash) |
+| [`bundles deploy`](/docs/runtime/cli/bundle-deploy) | Yes | Activate a published bundle semver or lock hash |
+| [`bundles versions`](/docs/runtime/cli/bundle-versions) | Yes | List published bundle versions (semver + lock hash) |
+| [`bundles active`](/docs/runtime/cli/bundle-active) | Yes | Show the active bundle deployment |
+| [`bundles history`](/docs/runtime/cli/bundle-history) | Yes | Bundle deployment activation history |
+| [`bundles run`](/docs/runtime/cli/bundle-run) | Yes | Start a session on the bundle root member |
+| [`bundles secret-requirements`](/docs/runtime/cli/bundle-secret-requirements) | Yes | Inspect the union of fromEnv secret requirements for a deployed bundle |
 
 ## Global flags
 
@@ -151,9 +176,9 @@ Publish, deploy, and rollback record an **actor** for audit. Set `PHRONY_ACTOR` 
 
 ```bash
 phrony init ./my-agent
-phrony validate ./my-agent/agent.yaml
-phrony publish ./my-agent/agent.yaml
-phrony deploy demo/my-agent@0.1.0
+phrony agents validate ./my-agent/agent.yaml
+phrony agents publish ./my-agent/agent.yaml
+phrony agents deploy demo/my-agent@0.1.0
 export ANTHROPIC_API_KEY="sk-..."   # or: phrony run demo/my-agent -e .env
 phrony run demo/my-agent
 ```

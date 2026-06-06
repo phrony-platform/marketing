@@ -1,0 +1,246 @@
+---
+title: "Agent delegation"
+description: "Let an agent call another agent as a tool—spec.agents bindings inside a Bundle, nested sessions, depth limits, and inherited secrets."
+---
+
+## Overview
+
+<Note>
+  **An agent-to-agent call is just a tool call.** Phrony has no special vocabulary for orchestrators or sub-agents: when one agent delegates to another, the target runs to completion in an isolated nested session and returns its final output as the tool result. You author delegation with the **`spec.agents`** sugar block, and at bundle publish each entry compiles down to an ordinary [tool binding](/docs/agent-spec/resources/tools)—so policies, human-in-the-loop, limits, tracing, and recovery all reuse the same machinery as any other tool.
+</Note>
+
+Use **`spec.agents`** to declare the other agents this agent may call. Each entry names a target by ref, an optional wire name, and the shape of the result returned to the model. The parent model sees a normal tool; the runtime dispatches the call to a fresh child session running the pinned target snapshot.
+
+<Warning>
+  **`spec.agents` requires a [Bundle](/docs/agent-spec/resources/bundle).** A standalone `kind: Agent` with `spec.agents` cannot be published alone. Package the root agent and every reachable delegate in a `kind: Bundle` document (with required `metadata.version` semver), run [`phrony bundles lock`](/docs/agent-spec/resources/bundle#lock-validate-publish) to commit `bundle.lock.json`, bump semver when the closure changes, then publish with `phrony bundles publish`.
+</Warning>
+
+| Topic | Chapter |
+|-------|---------|
+| Multi-agent packaging | [Bundle](/docs/agent-spec/resources/bundle) |
+| Worker- and MCP-backed tools | [Tool bindings](/docs/agent-spec/resources/tools), [MCP servers](/docs/agent-spec/resources/mcp-servers) |
+| Dispatch and recovery | [Tool dispatch](/docs/runtime/tool-dispatch) |
+| Run-wide caps | [Agent definition](/docs/agent-spec/resources/agent#speclimits) |
+| Inherited credentials | [Secrets](/docs/agent-spec/resources/secrets) |
+
+## Minimal example
+
+This orchestrator lives inside a [Bundle](/docs/agent-spec/resources/bundle) and delegates to a vendored specialist by local path:
+
+```yaml
+apiVersion: phrony.com/v1
+kind: Agent
+
+metadata:
+  name: orchestrator
+  namespace: support
+  version: 1.0.0
+
+secrets:
+  anthropic:
+    fromEnv: ANTHROPIC_API_KEY
+
+spec:
+  purpose: Route customer questions and delegate billing to a specialist.
+
+  instructions:
+    text: You triage support requests and delegate billing questions.
+
+  model:
+    provider: anthropic
+    name: claude-sonnet-4-5
+
+  agents:
+    - ref: ./specialists/billing.yaml
+      as: ask_billing
+      description: Delegate billing questions; returns a resolved answer.
+```
+
+The parent model now has an `ask_billing` tool. When it calls that tool, the runtime starts a nested session on the **pinned** billing snapshot from the bundle closure and returns the specialist's final answer as the tool result.
+
+## spec.agents
+
+Each entry declares one target agent this agent may delegate to.
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `ref` | Yes | [Ref kind](#ref-kinds)—local path, pinned external id, or floating external with `late_bound` |
+| `as` | No | Wire name shown to the parent model; defaults to a sanitized form of `ref` |
+| `description` | No | Tool description presented to the parent model |
+| `input_schema` | No | `ref` or `inline` JSON Schema for the call arguments; defaults to a single `{ "task": string }` contract |
+| `result` | No | `summary` (default) or `full`; see [Result shape](#result-shape) |
+| `policies` | No | Policy documents gating the delegation call (logical refs or bundle file refs) |
+| `late_bound` | No | Opt in to live active-deployment resolution at call time; excluded from bundle closure |
+
+### Ref kinds
+
+`ref` classifies into three forms. Unpinned external refs are rejected unless `late_bound: true`.
+
+| Form | Example | Closure | Runtime dispatch |
+|------|---------|---------|------------------|
+| **Local path** | `./specialists/billing.yaml` | Included; vendored member | Frozen `agent_version_id` from bundle publish |
+| **Pinned external** | `billing.refunds@1.4.0` | Included; external pin | Frozen `agent_version_id` from bundle publish |
+| **Late-bound external** | `billing.refunds` with `late_bound: true` | **Excluded** from closure | Active deployment at call time |
+
+Local paths must resolve inside the [bundle root](/docs/agent-spec/resources/bundle#directory-layout). External refs must include `@semver` unless `late_bound` is set.
+
+<Warning>
+  **`late_bound` is an escape hatch**, not the default. It opts out of closure pinning and resolves to the target's active deployment at call time. Use it only when you intentionally want live upgrades without re-publishing the bundle.
+</Warning>
+
+### Default input schema
+
+When you omit `input_schema`, the binding presents a single required string argument:
+
+```yaml
+input_schema:
+  inline:
+    type: object
+    properties:
+      task: { type: string }
+    required: [task]
+```
+
+Supply your own `ref` or `inline` schema to give the parent model a richer, typed call contract. The parent's tool-call arguments become the child session's input.
+
+### Result shape
+
+`result` controls what the runtime returns to the parent model as the tool result:
+
+| Value | Returned payload |
+|-------|------------------|
+| `summary` (default) | `{ "output": <child final message> }`—just the specialist's final answer |
+| `full` | The child's entire session output: final message, token usage, and per-turn trace |
+
+## Compilation
+
+At bundle publish, `spec.agents` is **sugar that compiles into `spec.tools`**. Each entry expands into a normal tool binding with an `agent` block and the authoring `spec.agents` list is cleared from the resolved snapshot (the same way policy attachments become compiled-only). The expanded binding:
+
+- Routes dispatch to a nested child agent session instead of a worker or MCP server
+- Carries a frozen **`agent_version_id`** (and `child_name` for vendored targets) set during the [closure walk](/docs/agent-spec/resources/bundle#closure-walk)
+- Is assigned `side_effect_class: non_idempotent_write`, so recovery never blindly re-dispatches a side-effecting child after an indeterminate outcome
+- Flows through the standard pipeline: model tool definitions, [policy gates](/docs/agent-spec/resources/policy), [HITL](/docs/runtime/hitl), limits, tracing, and recovery
+
+```yaml
+# Authoring (spec.agents)
+spec:
+  agents:
+    - ref: ./specialists/billing.yaml
+      as: ask_billing
+
+# Resolved snapshot (compiled into spec.tools)
+spec:
+  tools:
+    - ref: support.billing
+      as: ask_billing
+      side_effect_class: non_idempotent_write
+      input_schema:
+        inline:
+          type: object
+          properties:
+            task: { type: string }
+          required: [task]
+      agent:
+        namespace: support
+        name: billing
+        version: <content-hash>
+        child_name: billing
+        agent_version_id: <frozen-uuid>
+```
+
+<Warning>
+  Do not author `spec.tools[].agent` directly on an Agent. Declare delegation under `spec.agents`, which compiles to the agent binding at bundle publish. Validation rejects manifests that set the compiled-only `agent` field by hand (the same rule pattern as `spec.policies`).
+</Warning>
+
+## Nested session execution
+
+When the parent model calls a delegation tool, the runtime:
+
+1. Enforces the depth cap—`depth + 1` must not exceed [`max_subagent_depth`](#depth-limit). Over the cap returns a tool error to the model rather than failing the run.
+2. Resolves the target: uses the compiled `agent_version_id` for pinned bindings, or the active deployment for `late_bound` bindings only.
+3. Creates a durable child session linked to the parent (`parent_session_id`) at `depth + 1`, inheriting secrets by name and mapping the tool-call arguments to the child input.
+4. Drives the child to completion synchronously, bounded by the parent's remaining wall-clock budget.
+5. Returns the child's final output as the tool result, per the binding's [`result`](#result-shape) shape.
+
+A child agent with its own `spec.agents` recurses naturally at `depth + 2`, since it runs through the same path.
+
+### Secrets for child sessions
+
+Each agent declares only the secrets **it** uses. For **bundle runs**, the runtime unions requirements across the frozen closure, validates the full union on the root session, and stores values in a **bundle secret pool** on the root session. Child sessions **inherit by name** from that pool (not hop-by-hop from the immediate parent), so a specialist can declare `anthropic` even when the root orchestrator only declares `openai`.
+
+For single-agent runs (no bundle), child inheritance still copies from the parent session encrypted store; the root run must supply every secret name used in that tree.
+
+See [Secrets](/docs/agent-spec/resources/secrets) for how secrets are declared and resolved. Use [`phrony bundles secret-requirements`](/docs/runtime/cli/bundle-secret-requirements) to inspect the deployed bundle union before running.
+
+## Limits across the tree
+
+Delegation limits span the whole tree, not a single session:
+
+| Limit | Behavior across delegation |
+|-------|----------------------------|
+| Depth | `spec.limits.max_subagent_depth` caps nesting; see below |
+| Wall-clock | The parent's remaining `max_wall_clock_seconds` budget bounds each child, so a child cannot outlive the parent |
+| Tokens | Child token usage is returned to the parent and counts toward the parent's `max_tokens_per_run` accounting |
+
+### Depth limit
+
+Set the maximum delegation nesting on [`spec.limits`](/docs/agent-spec/resources/agent#speclimits):
+
+```yaml
+spec:
+  limits:
+    max_subagent_depth: 3   # A -> B -> C; D would be rejected
+```
+
+| Rule | Notes |
+|------|-------|
+| `max_subagent_depth` | Integer `>= 1`; defaults to `5` when unset |
+| Over the cap | The delegation call returns a tool error to the parent model; the run continues |
+
+## Policies and human-in-the-loop
+
+Because a delegation compiles to a tool binding, the entire [Policy](/docs/agent-spec/resources/policy) surface applies. Attach `policies` on the `spec.agents` entry (or agent-wide via `default_policies`) to require approval, escalate, or deny a delegation before the child session starts:
+
+```yaml
+spec:
+  agents:
+    - ref: ./specialists/billing.yaml
+      as: ask_billing
+      policies:
+        - support.delegation-approval
+```
+
+Approval, escalate, and deny decisions evaluate before any child session is created—see [Policy](/docs/agent-spec/resources/policy) and [Human-in-the-loop approvals](/docs/runtime/hitl).
+
+## Tracing and recovery
+
+- **Tracing:** the parent emits `tool_call` and `tool_result` events for the delegation exactly like any other tool. The child is a full session with its own events, linked to the parent by `parent_session_id`, so the trace spans the whole tree with no new vocabulary.
+- **Recovery:** the delegation is recorded in the tool-invocation ledger and the child session is durable, keyed by the originating call id. On restart, a completed child returns its stored output; an in-flight child is resumed rather than duplicated. Since agent bindings are `non_idempotent_write`, the parent will not auto-redispatch a child whose outcome is indeterminate—it routes to side-effect recovery instead. See [Tool dispatch](/docs/runtime/tool-dispatch#failure-modes).
+
+## Validation rules
+
+| Rule | Error when violated |
+|------|---------------------|
+| Standalone publish | `spec.agents` present on an agent published outside a Bundle |
+| `agents[].ref` | Missing, or not a local path or `namespace.name[@version]` |
+| `agents[].ref` local | Path resolves outside bundle root |
+| `agents[].ref` external | Missing `@version` unless `late_bound: true` |
+| `agents[].ref` version | `@version` constraint is not valid semver |
+| `agents[].ref` uniqueness | The same target is declared twice |
+| Self-reference | `ref` names the declaring agent (`namespace.name`) |
+| Wire name | `as` (or the derived name) must match `[a-zA-Z0-9_-]{1,64}` and not collide with a `spec.tools` binding or another delegation |
+| `agents[].result` | Value other than `summary` or `full` |
+| `agents[].input_schema` | Invalid schema object |
+| `spec.limits.max_subagent_depth` | Less than `1` |
+| `spec.tools[].agent` | Set on an authoring manifest (compiled-only field) |
+
+`phrony bundles validate` checks these locally before publish. When `bundle.lock.json` is present, validation also compares the committed lock to the recomputed closure; use `--require-lock` in CI to reject missing locks.
+
+<UpNext>
+  <Card title="Bundle" href="/docs/agent-spec/resources/bundle">
+    Closure walk, lockfile versioning, vendored identity, and publish flow.
+  </Card>
+  <Card title="Tool bindings" href="/docs/agent-spec/resources/tools">
+    Shared binding fields—as, input_schema, side_effect_class, and policies.
+  </Card>
+</UpNext>

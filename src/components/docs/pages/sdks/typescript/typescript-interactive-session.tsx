@@ -21,15 +21,21 @@ export function TypeScriptSdkInteractiveSessionPage() {
             className="text-foreground underline underline-offset-4 hover:no-underline"
           >
             PhronyAgent.runInteractive()
-          </Link>
-          . The first client message must be <code>start</code> or <code>attach</code>.
+          </Link>{' '}
+          or <code>PhronyBundle.runInteractive()</code>. The first client message must be <code>start</code> or{' '}
+          <code>attach</code>.
         </DocParagraph>
 
         <DocH2>Methods</DocH2>
         <MethodExample
           name="start(options)"
-          description="New session: agentRef, JSON input, optional resolvedSecrets."
+          description="New session: agentRef or bundleRef (mutually exclusive), JSON input, optional resolvedSecrets."
           code={ex.interactiveStart}
+        />
+        <MethodExample
+          name="start({ bundleRef })"
+          description="Start an interactive session on a deployed bundle."
+          code={ex.interactiveStartBundle}
         />
         <MethodExample name="attach(options)" description="Reconnect to an existing sessionId." code={ex.interactiveAttach} />
         <MethodExample

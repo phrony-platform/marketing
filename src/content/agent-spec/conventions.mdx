@@ -274,7 +274,7 @@ Exactly one of `ref` (+ optional `version`) or `inline` for:
 
 **Semver** (semantic versioning) is the familiar `MAJOR.MINOR.PATCH` numbering — `2.4.0` means major version 2, minor 4, patch 0. The numbers signal intent: bump the last for a fix, the middle for a backward-compatible addition, the first for a breaking change.
 
-`metadata.version` is a **semver** string for humans, CI, and release notes (for example `2.4.0`). It is required on every Agent document.
+`metadata.version` is a **semver** string for humans, CI, and release notes (for example `2.4.0`). It is required on every Agent and [Bundle](/docs/agent-spec/resources/bundle) document.
 
 ```yaml
 metadata:
@@ -284,8 +284,10 @@ metadata:
 
 The runtime assigns a stable **internal version id** when you publish. Traces and APIs can refer to both the semver label and the internal id. **Deploy** (activation) is separate: only the active deployed version is eligible for new sessions in a given runtime instance.
 
+For [Bundles](/docs/agent-spec/resources/bundle), publish also stores a **lock hash** (`sha256:…`) from `bundle.lock.json` alongside semver. Deploy and run accept either `namespace/name@semver` or `namespace/name@sha256:…`.
+
 <Warning>
-  Do not rely on semver alone as the only runtime identifier across environments. Two publishes of the same semver with different resolved content produce different internal ids and snapshots.
+  Do not rely on semver alone as the only runtime identifier across environments. Two publishes of the same semver with different resolved content produce different internal ids and snapshots. For bundles, the lock hash is the canonical content fingerprint when semver labels might collide across branches.
 </Warning>
 
 ## Mutual-exclusion rules

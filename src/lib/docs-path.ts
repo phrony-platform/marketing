@@ -25,3 +25,16 @@ export function isNavLinkActive(pathname: string, href: string): boolean {
   const target = normalizeDocsPath(href);
   return current === target;
 }
+
+type NavLinkWithChildren = {
+  href: string;
+  children?: NavLinkWithChildren[];
+};
+
+/** True when the link or any nested child matches the current path. */
+export function isNavBranchActive(pathname: string, link: NavLinkWithChildren): boolean {
+  if (isNavLinkActive(pathname, link.href)) {
+    return true;
+  }
+  return link.children?.some((child) => isNavBranchActive(pathname, child)) ?? false;
+}

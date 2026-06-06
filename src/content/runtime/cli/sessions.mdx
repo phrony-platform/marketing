@@ -27,11 +27,14 @@ phrony sessions ls [AGENT] [flags]
 
 When `AGENT` is omitted, lists sessions across all agents. When set, `AGENT` is `namespace/name`.
 
+By default, the listing shows **root** sessions only—runs started directly with `phrony run` or `phrony bundles run`. Sessions created by [agent delegation](/docs/agent-spec/resources/agents) (nested child runs linked via `parent_session_id`) are omitted unless you pass `--include-children`.
+
 ### Flags
 
 | Flag | Description |
 |------|-------------|
 | `--status` | Filter by status: `pending`, `running`, `awaiting_approval`, `awaiting_input`, `completed`, `failed`, `cancelled` |
+| `--include-children` | Include delegated child sessions in the listing (default: root sessions only) |
 
 ### Examples
 
@@ -40,6 +43,8 @@ phrony sessions ls
 phrony sessions ls demo/echo-agent
 phrony sessions ls demo/echo-agent --status awaiting_input
 phrony sessions ls --status awaiting_approval
+phrony sessions ls --include-children
+phrony sessions ls demo/orchestrator --include-children --status running
 ```
 
 ### Output
@@ -52,17 +57,26 @@ Sessions in **`awaiting_approval`** are waiting on an operator decision. Use [`p
 
 ## `sessions inspect`
 
-Show metadata for one session.
+Dump the full persisted state for one session: input, output, conversation history, token usage, ordered audit timeline, tool invocations (with queue and execution delays), approvals, agent context, and delegated child sessions.
 
 ```bash
-phrony sessions inspect SESSION_ID
+phrony sessions inspect SESSION_ID [flags]
 ```
 
-### Example
+### Flags
+
+| Flag | Description |
+|------|-------------|
+| `--json` | Emit the full `InspectSession` RPC response as JSON |
+
+### Examples
 
 ```bash
 phrony sessions inspect run_abc123
+phrony sessions inspect run_abc123 --json
 ```
+
+Human output includes a unified **timeline** (session events, invocation milestones, and approvals sorted chronologically with inter-step gaps), per-turn usage from history, and nested **child** sessions when the run delegated to sub-agents.
 
 ---
 

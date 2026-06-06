@@ -32,6 +32,16 @@ const RUNTIME_MDX_PAGES = [
   { slug: 'runtime/cli/sessions', file: 'runtime/cli/sessions.mdx' },
   { slug: 'runtime/cli/approvals', file: 'runtime/cli/approvals.mdx' },
   { slug: 'runtime/cli/agents', file: 'runtime/cli/agents.mdx' },
+  { slug: 'runtime/cli/bundle', file: 'runtime/cli/bundle.mdx' },
+  { slug: 'runtime/cli/bundle-lock', file: 'runtime/cli/bundle-lock.mdx' },
+  { slug: 'runtime/cli/bundle-validate', file: 'runtime/cli/bundle-validate.mdx' },
+  { slug: 'runtime/cli/bundle-publish', file: 'runtime/cli/bundle-publish.mdx' },
+  { slug: 'runtime/cli/bundle-deploy', file: 'runtime/cli/bundle-deploy.mdx' },
+  { slug: 'runtime/cli/bundle-versions', file: 'runtime/cli/bundle-versions.mdx' },
+  { slug: 'runtime/cli/bundle-active', file: 'runtime/cli/bundle-active.mdx' },
+  { slug: 'runtime/cli/bundle-history', file: 'runtime/cli/bundle-history.mdx' },
+  { slug: 'runtime/cli/bundle-run', file: 'runtime/cli/bundle-run.mdx' },
+  { slug: 'runtime/cli/bundle-secret-requirements', file: 'runtime/cli/bundle-secret-requirements.mdx' },
 ] as const;
 
 export function registerRuntimeMdxPages() {

@@ -27,12 +27,12 @@ const BETWEEN_CMD_MS = 450;
 
 const COMMANDS = [
   {
-    command: 'phrony publish agent.yaml',
+    command: 'phrony agents publish agent.yaml',
     lines: [{ kind: 'success' as const, text: 'bank/payment-assistant@2.0.0' }],
     variant: 'neutral' as const,
   },
   {
-    command: 'phrony deploy bank/payment-assistant@2.0.0',
+    command: 'phrony agents deploy bank/payment-assistant@2.0.0',
     lines: [
       { kind: 'success' as const, text: 'deployed bank/payment-assistant@2.0.0' },
       { kind: 'policy' as const },
@@ -40,7 +40,7 @@ const COMMANDS = [
     variant: 'deploy' as const,
   },
   {
-    command: 'phrony retire bank/payment-assistant@1.0.0',
+    command: 'phrony agents retire bank/payment-assistant@1.0.0',
     lines: [{ kind: 'retired' as const, text: 'retired bank/payment-assistant@1.0.0' }],
     variant: 'retire' as const,
   },

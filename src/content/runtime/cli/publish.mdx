@@ -6,7 +6,7 @@ description: "Publish an agent manifest as an immutable version."
 ## Synopsis
 
 ```bash
-phrony publish MANIFEST
+phrony agents publish MANIFEST
 ```
 
 ## Description
@@ -15,11 +15,11 @@ phrony publish MANIFEST
   **In plain terms:** publish takes a snapshot of your agent and locks it in. **Immutable** means it can never change after this — if you need an edit, you publish a new version. The runtime identifies each version by its `metadata.version` and by a **content hash** (a fingerprint of the exact bytes), so two publishes that differ even slightly are always distinguishable.
 </Note>
 
-Loads and resolves the manifest bundle locally, then sends the resolved snapshot to the runtime over gRPC. The runtime stores an **immutable** agent version keyed by content hash and `metadata.version`.
+Loads and resolves the manifest locally, then sends the resolved snapshot to the runtime over gRPC. The runtime stores an **immutable** agent version keyed by content hash and `metadata.version`.
 
 Publishing does **not** make the version runnable. After publish, use [`deploy`](/docs/runtime/cli/deploy) to activate the version for [`run`](/docs/runtime/cli/run).
 
-`MANIFEST` is the path to the primary Agent YAML file.
+`MANIFEST` is the path to a `kind: Agent` YAML file. For bundle manifests, use [`phrony bundles publish`](/docs/runtime/cli/bundle-publish) instead.
 
 ### Manifest secrets
 
@@ -41,7 +41,7 @@ The runtime records **`published_by`** from `PHRONY_ACTOR` (or the OS user when 
 ## Example
 
 ```bash
-phrony publish path/to/agent.yaml
+phrony agents publish path/to/agent.yaml
 ```
 
 On success, prints the agent reference and version:

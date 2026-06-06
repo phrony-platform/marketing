@@ -6,7 +6,7 @@ description: "Activate a published agent version for sessions."
 ## Synopsis
 
 ```bash
-phrony deploy AGENT@VERSION
+phrony agents deploy AGENT@VERSION
 ```
 
 ## Description
@@ -22,8 +22,8 @@ The runtime records **`deployed_by`** from `PHRONY_ACTOR` (or the OS user when u
 ## Example
 
 ```bash
-phrony publish path/to/agent.yaml
-phrony deploy demo/echo-agent@1.2.0
+phrony agents publish path/to/agent.yaml
+phrony agents deploy demo/echo-agent@1.2.0
 ```
 
 On success:

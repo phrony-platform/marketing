@@ -1,0 +1,271 @@
+---
+title: "Bundle"
+description: "Package multi-agent closures—kind: Bundle, metadata.version semver, lock hash, closure walk, vendored identity, and publish → deploy → run."
+---
+
+## Overview
+
+Use a **Bundle** when one agent delegates to others via [`spec.agents`](/docs/agent-spec/resources/agents). A `kind: Bundle` document names the root agent and packages every delegate in one directory—you publish and deploy the whole system as a single unit.
+
+A standalone `kind: Agent` with `spec.agents` cannot be published alone; validation rejects it with *"agents with spec.agents must be published via a Bundle"*.
+
+| Topic | Chapter |
+|-------|---------|
+| Delegation semantics | [Agent delegation](/docs/agent-spec/resources/agents) |
+| Single-agent fields | [Agent definition](/docs/agent-spec/resources/agent) |
+| File layout and refs | [Conventions](/docs/agent-spec/conventions) |
+| CLI commands | [`phrony bundles`](/docs/runtime/cli/bundle) |
+
+## Directory layout
+
+A bundle is a directory on disk. The bundle root contains `bundle.yaml` (`kind: Bundle`) plus every agent manifest reachable from `spec.root` through `spec.agents` local paths:
+
+```
+support/
+  bundle.yaml                 # kind: Bundle
+  bundle.lock.json            # committed closure lock (run phrony bundles lock)
+  orchestrator.yaml           # root agent (spec.agents → specialists)
+  specialists/
+    billing.yaml              # vendored leaf
+```
+
+## kind: Bundle
+
+The Bundle document is packaging-only: no model, instructions, or tools. It names the bundle and points at the root agent file.
+
+```yaml
+apiVersion: phrony.com/v1
+kind: Bundle
+
+metadata:
+  name: support
+  namespace: support
+  version: 1.0.0
+
+spec:
+  root: ./orchestrator.yaml
+```
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `metadata.name` | Yes | Bundle name; unique with `namespace` |
+| `metadata.namespace` | Yes | Addressability boundary |
+| `metadata.version` | Yes | Semver release label (`1.2.0` or `v1.2.0`); bump when the closure changes |
+| `metadata.labels` | No | Descriptive fleet metadata |
+| `spec.root` | Yes | Bundle-relative path to the root `kind: Agent` manifest |
+
+## Version identity
+
+Each published bundle snapshot has two immutable identities, mirroring standalone [agents](/docs/agent-spec/resources/agent):
+
+| Identity | Source | CLI / API ref |
+|----------|--------|---------------|
+| **Semver label** | `metadata.version` in `bundle.yaml` | `support/support@1.2.0` |
+| **Lock hash** | `sha256(canonical_json(bundle.lock.json))` | `support/support@sha256:…` |
+
+Both are write-once at publish. After any closure change, run `phrony bundles lock`, bump `metadata.version`, then publish.
+
+| Attempt at publish | Result |
+|--------------------|--------|
+| New semver + new lock hash | Allowed |
+| Same semver + same lock hash (re-publish) | Rejected |
+| Same semver + different lock hash | Rejected — increment `metadata.version` |
+| Same lock hash + different semver | Rejected — hash already bound to another semver |
+
+`phrony bundles lock` does **not** read or write `metadata.version`; the lockfile records closure content only.
+
+Commit `bundle.lock.json` beside `bundle.yaml`. Run `phrony bundles lock` after any closure change; CI can gate on `phrony bundles validate BUNDLE --require-lock`.
+
+## Closure walk
+
+During `phrony bundles lock`, `phrony bundles validate`, and `phrony bundles publish`, the CLI performs a **depth-first closure walk** starting at `spec.root`:
+
+1. Load and compile each vendored member agent.
+2. Follow every `spec.agents` edge that is **not** [`late_bound`](/docs/agent-spec/resources/agents#ref-kinds).
+3. **Local edges** (`./specialists/billing.yaml`) resolve to another agent file inside the bundle directory.
+4. **External edges** (`billing.refunds@1.4.0`) pin an already-published global agent version.
+5. **Cycles** in the delegation graph are rejected with a path showing the back-edge.
+6. **Duplicate `metadata.name`** among vendored children in the same bundle is rejected.
+
+The walk emits an ordered member list and a deterministic **lockfile**. The lock hash is `sha256(canonical_json(lockfile))`—a content fingerprint of the closure, separate from the hand-authored `metadata.version` semver.
+
+### Lockfile shape
+
+The closure walk produces **`bundle.lock.json`**—a committed sidecar beside `bundle.yaml`. It records a **`content_hash` for every closure member**—vendored manifests (computed locally) and pinned external agent versions (resolved from the runtime catalog). The lock hash fingerprints the closure bytes; `metadata.version` is the human release label stored alongside it at publish. Publish verifies the lockfile locally and on the server before storing it; sessions then run against that frozen closure, not whatever happens to be actively deployed at call time.
+
+`phrony bundles lock` is the **only** command that writes the lock. Commit the generated file in version control so PRs and CI can diff closure changes before publish. After a successful publish, the runtime stores the same bytes on `bundle_versions.lock` and returns the lock hash.
+
+```json
+{
+  "version": "sha256:…",
+  "root_child_name": "orchestrator",
+  "members": [
+    {
+      "child_name": "orchestrator",
+      "origin": "vendored",
+      "content_hash": "…",
+      "ref": "./orchestrator.yaml"
+    },
+    {
+      "child_name": "billing",
+      "origin": "vendored",
+      "content_hash": "…",
+      "ref": "./specialists/billing.yaml"
+    },
+    {
+      "child_name": "refunds",
+      "origin": "external",
+      "namespace": "billing",
+      "name": "refunds",
+      "version": "1.4.0",
+      "content_hash": "…",
+      "ref": "billing.refunds@1.4.0"
+    }
+  ]
+}
+```
+
+| `origin` | Meaning |
+|----------|---------|
+| `vendored` | Agent manifest lives inside the bundle; `content_hash` is computed from the compiled snapshot |
+| `external` | References an existing global `agent_versions` row pinned by `namespace.name@version`; `content_hash` is the manifest hash stored on that row |
+
+External members record semver identity **and** manifest bytes via `content_hash`. The CLI resolves that hash from the runtime catalog during `bundle lock` and `bundle validate` (when a committed lock is compared). Publish resolves `agent_version_id` from the database and verifies the stored `content_hash` matches the committed lock; it fails if the pin is missing, retired, archived, or the hash drifts.
+
+| Concern | In committed `bundle.lock.json` | At publish |
+|---------|----------------------------------|------------|
+| Vendored identity | `content_hash` from compiled JSON | Re-verified from sent manifests |
+| External identity | `namespace` / `name` / `version` pin + `content_hash` + `ref` | Resolve `agent_version_id`; verify DB `content_hash` matches lock |
+| Lock hash | `sha256(canonical_json(lock body))` | Must match committed lock; never recomputed with different rules |
+| Semver label | `metadata.version` in `bundle.yaml` | Stored on `bundle_versions.version` at publish |
+| `agent_version_id` pinning | Not in lock | Written onto compiled delegation bindings in each member snapshot |
+
+Changing any vendored member manifest—or any external member's resolved manifest bytes—changes the lockfile hash. Bump `metadata.version` and re-publish to register a new snapshot.
+
+### External hash resolution
+
+Vendored-only bundles stay fully offline: the closure walk compiles local files and hashes them on disk.
+
+When the closure includes pinned external refs (`billing.refunds@1.4.0`), `phrony bundles lock` and `phrony bundles validate` (lock comparison) call `GetAgentVersion` on the runtime to fill each external member's `content_hash`. Set `--runtime-addr` or `PHRONY_RUNTIME_ADDR` to the catalog that should author the lock—typically the same environment you publish against.
+
+```bash
+phrony bundles lock ./support/bundle.yaml --runtime-addr 127.0.0.1:7777
+```
+
+Locks created before external `content_hash` support omit the field; `bundles validate` and `bundles publish` reject them with a message to re-run `phrony bundles lock` against the intended catalog.
+
+## Vendored identity
+
+Vendored members do not occupy a global `agents` catalog slot. Their identity inside a published bundle is **`(bundle_version_id, child_name)`**—for example `support@<lock-hash>/billing`.
+
+- Vendored `agent_versions` rows have `origin=vendored` and `bundle_version_id` set; they have no standalone `agent_id`.
+- External members reference existing global agent versions; the `bundle_members` edge keeps that snapshot alive for retention.
+- At runtime, each compiled `spec.tools[].agent` binding carries a frozen **`agent_version_id`** set during bundle publish. Dispatch uses that id directly—no per-call active-deployment lookup.
+
+## Lock, validate, publish
+
+| Command | Purpose |
+|---------|---------|
+| `phrony bundles lock BUNDLE` | Walk the closure, resolve external `content_hash` values when needed, and write `bundle.lock.json` (the only writer path) |
+| `phrony bundles validate BUNDLE` | Walk the closure; resolve external hashes when needed; compare against committed lock when present |
+| `phrony bundles validate BUNDLE --require-lock` | Fail when `bundle.lock.json` is missing (CI gate) |
+| `phrony bundles publish BUNDLE` | Require committed lock, verify no drift, then publish |
+
+Typical workflow:
+
+```bash
+# Edit specialists, bump metadata.version in bundle.yaml, then:
+phrony bundles lock ./support/bundle.yaml            # add --runtime-addr when closure has external refs
+phrony bundles validate ./support/bundle.yaml --require-lock   # CI gate
+phrony bundles publish ./support/bundle.yaml         # → support/support 1.0.1 (sha256:…)
+phrony bundles deploy support.support@1.0.1
+phrony bundles run support.support
+# CI/scripts can still: deploy support.support@sha256:…
+```
+
+Without `--require-lock`, validate still passes when no lock exists (first-time authoring). Publish always requires a committed lock.
+
+## Publish → deploy → run
+
+### Publish
+
+`phrony bundles publish BUNDLE.yaml` (or `PublishBundle` over gRPC):
+
+1. Parse and validate the Bundle manifest (including required `metadata.version` semver).
+2. Require `bundle.lock.json`; re-walk the closure and verify it matches the committed lock.
+3. Send the committed lock bytes in `committed_lock`; the server re-verifies before storing.
+4. Reject immutable redeploy: same lock hash with different lock bytes, same semver with different hash, or same hash with different semver.
+5. Resolve external members from `agent_versions` (must exist, not be retired, and `content_hash` must match the committed lock).
+6. Materialize vendored members as bundle-scoped `agent_versions` rows.
+7. Pin `agent_version_id` on every compiled delegation binding in every member snapshot.
+8. Insert `bundles`, `bundle_versions` (semver + lock hash), and `bundle_members`.
+9. Return semver, lock hash, and the stored lockfile.
+
+### gRPC (`PublishBundle`)
+
+Custom publishers must mirror the CLI contract:
+
+| Field | Requirement |
+|-------|-------------|
+| `committed_lock` | Required. Canonical `bundle.lock.json` bytes (same file `phrony bundles lock` writes). Empty → `InvalidArgument`. |
+| `members` | Same **depth-first closure order** as the lockfile `members` array. Order mismatch fails lock verification even when the set is correct. |
+| Vendored `resolved_manifest` | Compiled JSON whose `content_hash` matches the committed lock entry for that member. |
+| External `authoring_ref` | Pinned `namespace.name@version`; must match the lock entry. Server resolves `agent_version_id` and verifies DB `content_hash` against the lock. |
+
+The server parses `committed_lock`, checks `version` against the body hash, rebuilds a verification lock from `members`, and rejects drift before persisting. It stores the committed bytes verbatim — it does not regenerate or enrich the lock.
+
+### Deploy
+
+`phrony bundles deploy support.support@1.2.0` activates a published bundle version by semver. You may also pin by lock hash: `support.support@sha256:…`. Only the **active** bundle deployment is eligible for new sessions when `@version` is omitted on run.
+
+### Run
+
+`phrony bundles run support.support` starts a session against the bundle's root member. Pass an explicit `@version` (semver or `sha256:…`) or use `--attach` / `-a` to start and attach an interactive view in one step (same as [`phrony run`](/docs/runtime/cli/run)).
+
+1. Resolve the active `bundle_version_id` from `bundle_deployments`.
+2. Load the root member's `agent_version_id` from `bundle_members WHERE is_root`.
+3. Create a session with `bundle_version_id` set; nested delegation recurses through the frozen member manifests.
+
+Secret resolution uses the **union** of `fromEnv` requirements across all frozen closure members. The CLI fetches that list from the runtime (via `GetBundleSecretRequirements`—same source as [`bundles secret-requirements`](/docs/runtime/cli/bundle-secret-requirements)), resolves values from the run host environment, and sends the full union on the root session. The runtime stores ciphertext in a **bundle secret pool** on the root session; nested child sessions inherit only the secret names they declare, decrypted from that pool. Inspect requirements before running with `phrony bundles secret-requirements BUNDLE[@VERSION]`.
+
+Pass `bundle_ref` in `RunSession` when calling the runtime API directly. Set `version` to semver or `sha256:…`; omit it to use the active deployment. An explicit `@version` must match the active deployment (comparison is by version id, not string label).
+
+## Promotion path
+
+A common lifecycle for a specialist that starts vendored and graduates to a shared service:
+
+1. **Vendored** — `./specialists/billing.yaml` inside the bundle closure.
+2. **Publish globally** — publish `billing` as a standalone agent when it is ready to be reused.
+3. **Pin external** — change the orchestrator's `spec.agents` ref to `billing.billing@1.2.0`, run `phrony bundles lock --runtime-addr …`, and re-publish the bundle.
+
+The lockfile records the external pin and its `content_hash`; runtime dispatch still uses the frozen `agent_version_id` compiled into the bundle snapshot.
+
+## Validation rules
+
+| Rule | Error when violated |
+|------|---------------------|
+| `kind` | Must be `Bundle` |
+| `metadata.version` | Missing or invalid semver |
+| `spec.root` | Missing, absolute, or resolves outside bundle root |
+| Closure cycles | Back-edge detected during walk |
+| Duplicate vendored `metadata.name` | Two local members share the same child name |
+| External member missing | Pinned `namespace.name@version` not found at publish |
+| External `content_hash` drift | Committed hash does not match `agent_versions.content_hash` at publish |
+| Stale external lock | External member in committed lock has no `content_hash` (re-run `phrony bundles lock` with `--runtime-addr`) |
+| Missing committed lock | `bundle publish` without `bundle.lock.json` |
+| Lock drift | Committed lock does not match recomputed closure (re-run `phrony bundles lock`; use `--runtime-addr` when externals are present) |
+| Lock hash collision | Same hash, different member content on re-publish |
+| Semver drift | Same semver published with a different lock hash |
+| Hash bound to other semver | Same lock hash published under a different semver |
+| Secret union conflict | Two closure members declare the same secret name with different `fromEnv` values (fails at lock, validate, and publish) |
+
+`phrony bundles validate` runs the closure walk locally. Vendored-only bundles never contact the runtime. When the closure includes external members, validation resolves their `content_hash` values from the catalog (same `--runtime-addr` / `PHRONY_RUNTIME_ADDR` contract as `bundles lock`). When `bundle.lock.json` exists, it must match the recomputed closure or validation fails with a drift error. With `--require-lock`, validation fails when the lock file is absent.
+
+<UpNext>
+  <Card title="Agent delegation" href="/docs/agent-spec/resources/agents">
+    spec.agents bindings, ref kinds, nested sessions, and limits.
+  </Card>
+  <Card title="Agent definition" href="/docs/agent-spec/resources/agent">
+    Single-agent fields—metadata, spec, limits, and output.
+  </Card>
+</UpNext>

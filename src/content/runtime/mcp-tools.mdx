@@ -58,7 +58,7 @@ v1 uses **Streamable HTTP** only (`transport: streamable_http`, the default when
 
 Requirements on `url`:
 
-- Valid **HTTPS** URL (validated at `phrony validate`)
+- Valid **HTTPS** URL (validated at `phrony agents validate`)
 - Reachable from the runtime process (network egress, TLS, and firewall rules are operator concerns)
 
 ## Ledger and recovery
@@ -87,7 +87,7 @@ MCP-backed tools do not use the worker **allowlist** (workload identity, image d
 |------|--------|
 | Manifest | Add `spec.mcp_servers` and `mcp` on bindings with `input_schema` and `side_effect_class` |
 | Secrets | Declare `auth.secret` in `secrets` with `fromEnv`; run with env vars set or `phrony run -e .env` |
-| Validate | `phrony validate ./agent` — HTTPS URL, secret refs, MCP binding rules |
+| Validate | `phrony agents validate ./agent` — HTTPS URL, secret refs, MCP binding rules |
 | Network | Ensure the runtime can reach each `url` over HTTPS |
 | Policies | Attach allow / `require_approval` rules with `tool:<ref>` scope as for worker tools |
 

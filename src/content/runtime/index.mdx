@@ -28,8 +28,8 @@ You'll work with two programs from the [runtime repository](https://github.com/p
 
 ```bash
 # You write agent.yaml locally
-phrony publish ./my-agent/agent.yaml    # runtime stores version 1.0.0
-phrony deploy demo/my-agent@1.0.0       # version 1.0.0 is now "live"
+phrony agents publish ./my-agent/agent.yaml    # runtime stores version 1.0.0
+phrony agents deploy demo/my-agent@1.0.0       # version 1.0.0 is now "live"
 curl -X POST .../agent.run             # or: phrony run demo/my-agent
 ```
 
@@ -138,7 +138,7 @@ set -a && source .env && set +a
 | `PHRONY_RUNTIME_ADDR` | `phrony` on the host | Runtime gRPC endpoint (default `127.0.0.1:7777` when using compose) |
 | `PHRONY_ACTOR` | `phrony` on the host | Audit identity for publish, deploy, and rollback (defaults to OS username) |
 | `PHRONY_NO_TUI` | `phrony` | Disable the interactive session TUI (plain stdout) |
-| `NO_COLOR` | `phrony diff` | Disable colorized diff output (also disabled when stdout is not a TTY). See [`diff`](/docs/runtime/cli/diff) |
+| `NO_COLOR` | `phrony agents diff` | Disable colorized diff output (also disabled when stdout is not a TTY). See [`diff`](/docs/runtime/cli/diff) |
 
 The compose `runtime` service sets its own `RUNTIME_DATABASE_URL` (hostname `postgres`), `RUNTIME_GRPC_ADDR=0.0.0.0:7777`, and a dev `RUNTIME_SECRETS_ENCRYPTION_KEY` in `docker-compose.yml`.
 

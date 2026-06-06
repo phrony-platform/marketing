@@ -37,7 +37,7 @@ export function QuickStartPublishDeployRunPage() {
           Send a resolved snapshot of your manifest to the runtime. The version is keyed by{' '}
           <code>metadata.version</code> and a content hash—it cannot change after publish.
         </DocParagraph>
-        <DocCodeBlock language="bash" title="terminal" code="phrony publish ./my-agent/agent.yaml" />
+        <DocCodeBlock language="bash" title="terminal" code="phrony agents publish ./my-agent/agent.yaml" />
         <DocParagraph>
           On success the CLI prints the agent reference, for example{' '}
           <code>default/my-agent 0.1.0</code>.
@@ -50,7 +50,7 @@ export function QuickStartPublishDeployRunPage() {
           copy to use when you run this agent—use the same <code>namespace</code>, <code>name</code>, and{' '}
           <code>version</code> as in your file:
         </DocParagraph>
-        <DocCodeBlock language="bash" title="terminal" code="phrony deploy default/my-agent@0.1.0" />
+        <DocCodeBlock language="bash" title="terminal" code="phrony agents deploy default/my-agent@0.1.0" />
 
         <DocH2>Run</DocH2>
         <QuickStartConcept concept="session" />
@@ -71,7 +71,7 @@ phrony run default/my-agent --attach`}
         <DocDanger title="Expected error">
           <p>
             If you tried the commands above without <code>OPENAI_API_KEY</code> in your environment,{' '}
-            <code>phrony run</code> should fail—that is expected. <code>phrony publish</code> only stored a{' '}
+            <code>phrony run</code> should fail—that is expected. <code>phrony agents publish</code> only stored a{' '}
             <code>fromEnv</code> reference in the manifest, not the secret itself. A typical message:
           </p>
           <p className="mt-2 font-mono text-[13px] leading-relaxed">
@@ -114,8 +114,8 @@ phrony run default/my-agent --attach`}
           language="bash"
           title="terminal"
           code={`export OPENAI_API_KEY=sk-...
-phrony publish ./my-agent/agent.yaml
-phrony deploy default/my-agent@0.1.0
+phrony agents publish ./my-agent/agent.yaml
+phrony agents deploy default/my-agent@0.1.0
 phrony run default/my-agent --attach`}
         />
 

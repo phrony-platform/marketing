@@ -8,6 +8,7 @@ export type DocExploreTabId = Exclude<DocTabId, 'home'>;
 export type DocNavLink = {
   title: string;
   href: string;
+  children?: DocNavLink[];
 };
 
 export type DocNavGroup = {
@@ -99,6 +100,8 @@ export const DOC_TABS: DocTab[] = [
           { title: 'Tool', href: '/docs/agent-spec/resources/tool' },
           { title: 'Policy', href: '/docs/agent-spec/resources/policy' },
           { title: 'Tools', href: '/docs/agent-spec/resources/tools' },
+          { title: 'Bundle', href: '/docs/agent-spec/resources/bundle' },
+          { title: 'Agent delegation', href: '/docs/agent-spec/resources/agents' },
           { title: 'MCP servers', href: '/docs/agent-spec/resources/mcp-servers' },
         ],
       },
@@ -128,12 +131,27 @@ export const DOC_TABS: DocTab[] = [
       {
         group: 'CLI',
         pages: [
-          { title: 'CLI overview', href: '/docs/runtime/cli' },
+          { title: 'Overview', href: '/docs/runtime/cli' },
           { title: 'init', href: '/docs/runtime/cli/init' },
           { title: 'status', href: '/docs/runtime/cli/status' },
           { title: 'validate', href: '/docs/runtime/cli/validate' },
           { title: 'diff', href: '/docs/runtime/cli/diff' },
           { title: 'publish', href: '/docs/runtime/cli/publish' },
+          {
+            title: 'bundle',
+            href: '/docs/runtime/cli/bundle',
+            children: [
+              { title: 'lock', href: '/docs/runtime/cli/bundle-lock' },
+              { title: 'validate', href: '/docs/runtime/cli/bundle-validate' },
+              { title: 'publish', href: '/docs/runtime/cli/bundle-publish' },
+              { title: 'deploy', href: '/docs/runtime/cli/bundle-deploy' },
+              { title: 'versions', href: '/docs/runtime/cli/bundle-versions' },
+              { title: 'active', href: '/docs/runtime/cli/bundle-active' },
+              { title: 'history', href: '/docs/runtime/cli/bundle-history' },
+              { title: 'run', href: '/docs/runtime/cli/bundle-run' },
+              { title: 'secret-requirements', href: '/docs/runtime/cli/bundle-secret-requirements' },
+            ],
+          },
           { title: 'versions', href: '/docs/runtime/cli/versions' },
           { title: 'inspect', href: '/docs/runtime/cli/inspect' },
           { title: 'deprecate', href: '/docs/runtime/cli/deprecate' },
@@ -154,7 +172,7 @@ export const DOC_TABS: DocTab[] = [
     id: 'sdks',
     label: 'SDKs',
     href: '/docs/sdks',
-    description: 'Client libraries for the Phrony runtime — install, connect, run agents, and register tool workers.',
+    description: 'Client libraries for the Phrony runtime — install, connect, run agents and bundles, and register tool workers.',
     groups: [
       {
         group: 'Overview',

@@ -22,7 +22,7 @@ export function TypeScriptSdkIndexPage() {
   return (
     <DocPage
       title="Overview"
-      description="The @phrony/sdk client for Node.js — install, run agents, stream sessions, and register workers."
+      description="The @phrony/sdk client for Node.js — install, run agents and bundles, stream sessions, and register workers."
       eyebrow="SDKs · TypeScript"
     >
       <DocProse>

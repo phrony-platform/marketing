@@ -2,18 +2,121 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu, X } from 'lucide-react';
+import { ChevronDown, Menu, X } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 
 import { docLabel } from '@/components/docs/doc-style';
-import type { DocTab } from '@/lib/docs-navigation';
-import { isNavLinkActive } from '@/lib/docs-path';
+import type { DocNavLink, DocTab } from '@/lib/docs-navigation';
+import { isNavBranchActive, isNavLinkActive } from '@/lib/docs-path';
 import { resolveDocSidebarGroupPages } from '@/lib/typescript-sdk-nav';
 import { cn } from '@/lib/utils';
 
 type Props = {
   tab: DocTab;
 };
+
+function navLinkClassName(active: boolean) {
+  return cn(
+    'block cursor-pointer rounded-sm px-2 py-1.5 text-sm transition-colors',
+    active
+      ? 'bg-muted font-medium text-foreground'
+      : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground',
+  );
+}
+
+function DocSidebarNavItem({
+  page,
+  pathname,
+  onNavigate,
+  depth = 0,
+}: {
+  page: DocNavLink;
+  pathname: string;
+  onNavigate: () => void;
+  depth?: number;
+}) {
+  const hasChildren = (page.children?.length ?? 0) > 0;
+  const branchActive = isNavBranchActive(pathname, page);
+  const linkActive = isNavLinkActive(pathname, page.href);
+  const [expanded, setExpanded] = useState(branchActive);
+
+  useEffect(() => {
+    if (branchActive) {
+      setExpanded(true);
+    }
+  }, [branchActive, pathname]);
+
+  if (!hasChildren) {
+    return (
+      <li>
+        <Link
+          href={page.href}
+          className={navLinkClassName(linkActive)}
+          style={depth > 0 ? { paddingLeft: `${depth * 0.75 + 0.5}rem` } : undefined}
+          aria-current={linkActive ? 'page' : undefined}
+          onClick={onNavigate}
+        >
+          {page.title}
+        </Link>
+      </li>
+    );
+  }
+
+  return (
+    <li>
+      <div
+        className={cn(
+          'flex cursor-pointer items-stretch gap-px rounded-sm transition-colors hover:bg-muted/50',
+          branchActive && !linkActive && 'bg-muted/30',
+        )}
+        role="button"
+        tabIndex={0}
+        aria-expanded={expanded}
+        onClick={() => setExpanded((open) => !open)}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            setExpanded((open) => !open);
+          }
+        }}
+      >
+        <Link
+          href={page.href}
+          className={cn(navLinkClassName(linkActive), 'min-w-0 flex-1 hover:bg-transparent')}
+          aria-current={linkActive ? 'page' : undefined}
+          onClick={(event) => {
+            event.stopPropagation();
+            onNavigate();
+          }}
+        >
+          {page.title}
+        </Link>
+        <span
+          className={cn(
+            'inline-flex shrink-0 items-center justify-center px-1.5 text-muted-foreground',
+            branchActive && 'text-foreground',
+          )}
+          aria-hidden
+        >
+          <ChevronDown className={cn('size-4 transition-transform', expanded ? 'rotate-180' : 'rotate-0')} />
+        </span>
+      </div>
+      {expanded ? (
+        <ul className="mt-px flex flex-col gap-px border-l border-border/70 ml-3 pl-1">
+          {page.children?.map((child) => (
+            <DocSidebarNavItem
+              key={child.href}
+              page={child}
+              pathname={pathname}
+              onNavigate={onNavigate}
+              depth={depth + 1}
+            />
+          ))}
+        </ul>
+      ) : null}
+    </li>
+  );
+}
 
 export function DocSidebar({ tab }: Props) {
   const pathname = usePathname();
@@ -41,26 +144,14 @@ export function DocSidebar({ tab }: Props) {
         <div key={group.group}>
           <p className={cn(docLabel, 'px-2')}>{group.group}</p>
           <ul className="mt-2 flex flex-col gap-px">
-            {resolveDocSidebarGroupPages(tab.id, group).map((page) => {
-              const active = isNavLinkActive(pathname, page.href);
-              return (
-                <li key={page.href}>
-                  <Link
-                    href={page.href}
-                    className={cn(
-                      'block cursor-pointer rounded-sm px-2 py-1.5 text-sm transition-colors',
-                      active
-                        ? 'bg-muted font-medium text-foreground'
-                        : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground',
-                    )}
-                    aria-current={active ? 'page' : undefined}
-                    onClick={closeMobile}
-                  >
-                    {page.title}
-                  </Link>
-                </li>
-              );
-            })}
+            {resolveDocSidebarGroupPages(tab.id, group).map((page) => (
+              <DocSidebarNavItem
+                key={page.href}
+                page={page}
+                pathname={pathname}
+                onNavigate={closeMobile}
+              />
+            ))}
           </ul>
         </div>
       ))}

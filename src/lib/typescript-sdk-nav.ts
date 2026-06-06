@@ -1,14 +1,13 @@
-export type TypeScriptSdkNavLink = {
-  title: string;
-  href: string;
-};
+import type { DocNavLink } from '@/lib/docs-navigation';
+
+export type TypeScriptSdkNavLink = DocNavLink;
 
 /** Sidebar order for @phrony/sdk docs under the SDKs → TypeScript group. */
 export const TYPESCRIPT_SDK_NAV: TypeScriptSdkNavLink[] = [
   { title: 'Overview', href: '/docs/sdks/typescript' },
   { title: 'Install', href: '/docs/sdks/typescript/install' },
   { title: 'Connect', href: '/docs/sdks/typescript/connect' },
-  { title: 'Run agents', href: '/docs/sdks/typescript/run' },
+  { title: 'Run agents & bundles', href: '/docs/sdks/typescript/run' },
   { title: 'Interactive sessions', href: '/docs/sdks/typescript/interactive-session' },
   { title: 'Tool workers', href: '/docs/sdks/typescript/worker' },
   { title: 'Runtime client', href: '/docs/sdks/typescript/runtime-client' },

@@ -62,7 +62,7 @@ export const QUICK_START_STEPS: QuickStartStep[] = [
         id: 'write-manifest:edit',
         label: 'Add secrets.openai (fromEnv) and set model provider to openai',
       },
-      { id: 'write-manifest:validate', label: 'Validate with phrony validate' },
+      { id: 'write-manifest:validate', label: 'Validate with phrony agents validate' },
     ],
   },
   {
@@ -72,8 +72,8 @@ export const QUICK_START_STEPS: QuickStartStep[] = [
     href: '/docs/quick-start/publish-deploy-run',
     summary: 'Publish an immutable version, activate it, and start a session.',
     tasks: [
-      { id: 'publish-deploy-run:publish', label: 'Publish the manifest with phrony publish' },
-      { id: 'publish-deploy-run:deploy', label: 'Activate the version with phrony deploy' },
+      { id: 'publish-deploy-run:publish', label: 'Publish the manifest with phrony agents publish' },
+      { id: 'publish-deploy-run:deploy', label: 'Activate the version with phrony agents deploy' },
       { id: 'publish-deploy-run:run', label: 'Run a session with phrony run' },
     ],
   },
@@ -143,14 +143,14 @@ export const QUICK_START_CONCEPTS: Record<
     brief:
       'Locks a manifest snapshot in the runtime as an immutable version. Editing later means publishing a new version—not mutating the old one.',
     href: '/docs/runtime/cli/publish',
-    linkLabel: 'phrony publish',
+    linkLabel: 'phrony agents publish',
   },
   deploy: {
     title: 'Deploy',
     brief:
       'Chooses which published version is active for new sessions. Publish stores the snapshot; deploy switches what phrony run uses by default.',
     href: '/docs/runtime/cli/deploy',
-    linkLabel: 'phrony deploy',
+    linkLabel: 'phrony agents deploy',
   },
   session: {
     title: 'Session',

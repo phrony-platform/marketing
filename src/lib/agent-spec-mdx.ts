@@ -12,6 +12,8 @@ const AGENT_SPEC_MDX_PAGES = [
   { slug: 'agent-spec/resources/tool', file: 'agent-spec/resources/tool.mdx' },
   { slug: 'agent-spec/resources/policy', file: 'agent-spec/resources/policy.mdx' },
   { slug: 'agent-spec/resources/tools', file: 'agent-spec/resources/tools.mdx' },
+  { slug: 'agent-spec/resources/bundle', file: 'agent-spec/resources/bundle.mdx' },
+  { slug: 'agent-spec/resources/agents', file: 'agent-spec/resources/agents.mdx' },
   { slug: 'agent-spec/resources/mcp-servers', file: 'agent-spec/resources/mcp-servers.mdx' },
 ] as const;
 

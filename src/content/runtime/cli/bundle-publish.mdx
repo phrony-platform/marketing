@@ -1,0 +1,50 @@
+---
+title: "bundle publish"
+description: "Verify bundle.lock.json and publish an immutable bundle version (semver + lock hash)."
+---
+
+## Synopsis
+
+```bash
+phrony bundles publish BUNDLE
+```
+
+## Description
+
+Publishes a multi-agent [Bundle](/docs/agent-spec/resources/bundle) to the runtime:
+
+1. Validates the manifest, including required `metadata.version` semver.
+2. Requires `bundle.lock.json`; fails with a message naming [`bundle lock`](/docs/runtime/cli/bundle-lock) when missing.
+3. Re-walks the closure, resolves external `content_hash` values when needed, and verifies the result matches the committed lock.
+4. Sends the committed lock bytes in `committed_lock`; the server re-verifies before storing.
+5. Enforces immutable version semantics (same semver or same lock hash cannot be rebound to different content).
+6. Validates the **secret union** across closure members; rejects when two members use the same secret name with different `fromEnv` values (same rule as [`bundle lock`](/docs/runtime/cli/bundle-lock) and [`bundle validate`](/docs/runtime/cli/bundle-validate)).
+7. Resolves external members (verifying DB `content_hash` against the lock), materializes vendored members, and pins `agent_version_id` on delegation bindings.
+
+Each published snapshot is identified by **semver** (`metadata.version`) and **lock hash** (`sha256:…` from the lockfile). Bump `metadata.version` when the closure changes. Publishing does **not** make the bundle runnable—use [`bundle deploy`](/docs/runtime/cli/bundle-deploy) next.
+
+`BUNDLE` is the path to the `kind: Bundle` YAML file.
+
+Do not use [`phrony agents publish`](/docs/runtime/cli/publish) for bundles.
+
+## Example
+
+```bash
+phrony bundles lock ./support/bundle.yaml
+phrony bundles publish ./support/bundle.yaml
+```
+
+On success:
+
+```text
+support/support 1.2.0 (sha256:…)
+```
+
+<UpNext>
+  <Card title="bundle deploy" href="/docs/runtime/cli/bundle-deploy">
+    Activate the published semver or lock hash for sessions.
+  </Card>
+  <Card title="Bundle spec" href="/docs/agent-spec/resources/bundle#publish--deploy--run">
+    Full publish, deploy, and run semantics.
+  </Card>
+</UpNext>

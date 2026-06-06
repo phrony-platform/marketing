@@ -12,6 +12,10 @@ export const agentSpecPageDescriptions: Record<string, string> = {
     'Conditions, portable decision, authority_ref, and decision.runtime.',
   '/docs/agent-spec/resources/tools':
     'Agent spec.tools — logical refs, schema overrides, and policy attachment.',
+  '/docs/agent-spec/resources/bundle':
+    'kind: Bundle — multi-agent closure, lockfile versioning, vendored identity, and publish flow.',
+  '/docs/agent-spec/resources/agents':
+    'spec.agents delegation — pinned targets inside a Bundle, nested sessions, and limits.',
   '/docs/agent-spec/resources/mcp-servers':
     'spec.mcp_servers and MCP-backed bindings — remote tools with static schemas.',
 };

@@ -1,0 +1,58 @@
+---
+title: "bundles"
+description: "Validate, lock, publish, deploy, and run multi-agent Bundle closures."
+---
+
+## Synopsis
+
+```bash
+phrony bundles ls [flags]
+phrony bundles lock BUNDLE
+phrony bundles validate BUNDLE [--require-lock]
+phrony bundles publish BUNDLE
+phrony bundles deploy BUNDLE@VERSION
+phrony bundles versions BUNDLE
+phrony bundles active BUNDLE
+phrony bundles history BUNDLE
+phrony bundles run BUNDLE[@VERSION] [flags]
+phrony bundles secret-requirements BUNDLE[@VERSION]
+```
+
+## Description
+
+Multi-agent systems that use [`spec.agents`](/docs/agent-spec/resources/agents) ship as [`kind: Bundle`](/docs/agent-spec/resources/bundle). The `bundles` command group walks the delegation closure, commits a **`bundle.lock.json`** sidecar, and publishes an immutable bundle version keyed by **`metadata.version`** (semver) and the lock hash (`sha256:…`).
+
+Only [`bundles lock`](/docs/runtime/cli/bundle-lock) writes the lock file. [`bundles publish`](/docs/runtime/cli/bundle-publish) requires a committed lock and verifies it before contacting the runtime.
+
+| Command | Server required | Page |
+|---------|-----------------|------|
+| `bundles ls` | Yes | — |
+| `bundles lock` | Only when closure has [external refs](/docs/agent-spec/resources/agents#ref-kinds) (to resolve `content_hash`) | [`bundles lock`](/docs/runtime/cli/bundle-lock) |
+| `bundles validate` | Only when closure has external refs (lock comparison) | [`bundles validate`](/docs/runtime/cli/bundle-validate) |
+| `bundles publish` | Yes | [`bundles publish`](/docs/runtime/cli/bundle-publish) |
+| `bundles deploy` | Yes | [`bundles deploy`](/docs/runtime/cli/bundle-deploy) |
+| `bundles versions` | Yes | [`bundles versions`](/docs/runtime/cli/bundle-versions) |
+| `bundles active` | Yes | [`bundles active`](/docs/runtime/cli/bundle-active) |
+| `bundles history` | Yes | [`bundles history`](/docs/runtime/cli/bundle-history) |
+| `bundles run` | Yes | [`bundles run`](/docs/runtime/cli/bundle-run) |
+| `bundles secret-requirements` | Yes | [`bundles secret-requirements`](/docs/runtime/cli/bundle-secret-requirements) |
+
+## Typical workflow
+
+```bash
+# Edit closure members, bump metadata.version in bundle.yaml, then:
+phrony bundles lock ./support/bundle.yaml            # add --runtime-addr when closure has external refs
+phrony bundles validate ./support/bundle.yaml --require-lock
+phrony bundles publish ./support/bundle.yaml         # → support/support 1.0.1 (sha256:…)
+phrony bundles deploy support.support@1.0.1
+phrony bundles run support.support
+```
+
+<UpNext>
+  <Card title="bundles lock" href="/docs/runtime/cli/bundle-lock">
+    Write bundle.lock.json from the current closure.
+  </Card>
+  <Card title="Bundle spec" href="/docs/agent-spec/resources/bundle">
+    Closure walk, lockfile shape, and vendored identity.
+  </Card>
+</UpNext>

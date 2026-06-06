@@ -1,6 +1,6 @@
 ---
 title: "agents"
-description: "List and archive agents."
+description: "Manage agent manifests and registry."
 ---
 
 ## Synopsis
@@ -11,9 +11,24 @@ phrony agents <subcommand> [args] [flags]
 
 ## Description
 
-List agents registered in the runtime and archive agents (deprecating all versions). Version listing, deprecate, and retire are top-level commands: [`versions`](/docs/runtime/cli/versions), [`deprecate`](/docs/runtime/cli/deprecate), [`retire`](/docs/runtime/cli/retire).
+Agent lifecycle commands: validate and publish manifests locally or to the runtime, inspect versions, deploy activations, and manage registry state. All subcommands except [`validate`](/docs/runtime/cli/validate) and [`diff`](/docs/runtime/cli/diff) require a running runtime.
 
-All subcommands require a running runtime.
+| Subcommand | Page | Summary |
+|------------|------|---------|
+| `agents ls` | — | List agents in the runtime |
+| `agents archive` | — | Archive an agent (deprecate all versions) |
+| `agents validate` | [`validate`](/docs/runtime/cli/validate) | Validate an agent manifest locally |
+| `agents diff` | [`diff`](/docs/runtime/cli/diff) | Diff local manifest against a published version |
+| `agents publish` | [`publish`](/docs/runtime/cli/publish) | Publish an immutable agent version |
+| `agents versions` | [`versions`](/docs/runtime/cli/versions) | List published versions |
+| `agents inspect` | [`inspect`](/docs/runtime/cli/inspect) | Metadata for a published version |
+| `agents deprecate` | [`deprecate`](/docs/runtime/cli/deprecate) | Mark a version as not runnable |
+| `agents retire` | [`retire`](/docs/runtime/cli/retire) | Retire a published version |
+| `agents deploy` | [`deploy`](/docs/runtime/cli/deploy) | Activate a published version for sessions |
+| `agents active` | [`active`](/docs/runtime/cli/active) | Show the active deployed version |
+| `agents history` | [`history`](/docs/runtime/cli/history) | Deployment activation history |
+
+[`rollback`](/docs/runtime/cli/rollback) stays at the top level for quick access.
 
 ---
 
@@ -71,10 +86,10 @@ Archived agents cannot be deployed or run.
 ---
 
 <UpNext>
+  <Card title="validate" href="/docs/runtime/cli/validate">
+    Check manifests before publish.
+  </Card>
   <Card title="publish" href="/docs/runtime/cli/publish">
     Register new versions.
-  </Card>
-  <Card title="versions" href="/docs/runtime/cli/versions">
-    List versions for one agent.
   </Card>
 </UpNext>

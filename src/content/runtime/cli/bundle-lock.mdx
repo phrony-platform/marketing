@@ -1,0 +1,45 @@
+---
+title: "bundle lock"
+description: "Write bundle.lock.json from the current delegation closure."
+---
+
+## Synopsis
+
+```bash
+phrony bundles lock BUNDLE
+```
+
+## Description
+
+Walks the [bundle closure](/docs/agent-spec/resources/bundle#closure-walk) starting at `spec.root` and writes **`bundle.lock.json`** beside the bundle manifest. This is the **only** command that writes the lock file.
+
+Vendored-only bundles are fully offline. When the closure includes [pinned external](/docs/agent-spec/resources/agents#ref-kinds) refs, the command resolves each external member's `content_hash` from the runtime catalog via `GetAgentVersion`. Set [`--runtime-addr`](/docs/runtime/cli#global-flags) or `PHRONY_RUNTIME_ADDR` to the environment whose catalog should author the lock.
+
+Commit the generated lock in version control so PRs and CI can diff closure changes before publish. The lock records closure content only—it does not include or update `metadata.version` semver in `bundle.yaml`.
+
+Lock also validates the **secret union** across closure members. If two members use the same secret name with different `fromEnv` values, lock fails with a message naming both members.
+
+`BUNDLE` is the path to the `kind: Bundle` YAML file (for example `support/bundle.yaml`).
+
+## Example
+
+```bash
+phrony bundles lock ./support/bundle.yaml
+phrony bundles lock ./support/bundle.yaml --runtime-addr 127.0.0.1:7777   # when closure has external refs
+```
+
+On success:
+
+```text
+locked: support/support sha256:…
+members: 3 (root: orchestrator)
+```
+
+<UpNext>
+  <Card title="bundle validate" href="/docs/runtime/cli/bundle-validate">
+    Verify the closure and compare against the committed lock.
+  </Card>
+  <Card title="Bundle spec" href="/docs/agent-spec/resources/bundle#lockfile-shape">
+    Lockfile fields and vendored vs external members.
+  </Card>
+</UpNext>
