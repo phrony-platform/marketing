@@ -15,7 +15,8 @@ import {
   DocTableRow,
 } from '@/components/docs';
 import { QuickStartConcept, QuickStartStepPanel } from '@/components/docs/quick-start';
-import { RUNTIME_GITHUB_URL } from '@/lib/project-urls';
+import { RUNTIME_DOCKER_COMPOSE, RUNTIME_DOCKER_COMPOSE_PATH } from '@/lib/runtime-docker-compose';
+import { PHRONY_RUNTIME_IMAGE, RUNTIME_DOCKER_COMPOSE_URL, RUNTIME_GITHUB_URL } from '@/lib/project-urls';
 
 export function QuickStartSetupRuntimePage() {
   return (
@@ -39,49 +40,65 @@ export function QuickStartSetupRuntimePage() {
 
         <DocH2>Prerequisites</DocH2>
         <DocParagraph>
-          Docker (for local Postgres and the runtime container) and Go 1.25+ if you build binaries on your host. Clone
-          the{' '}
-          <a href={RUNTIME_GITHUB_URL} className="text-foreground underline underline-offset-4 hover:no-underline">
-            runtime repository
-          </a>{' '}
-          to follow the commands below.
+          Docker Desktop or Docker Engine, and Go 1.25+ to install the operator CLI. The runtime itself is pulled from
+          the official image <code>{PHRONY_RUNTIME_IMAGE}</code>.
         </DocParagraph>
 
         <DocH2>Start the stack</DocH2>
         <DocParagraph>
-          From the repository root, bring up Postgres and the runtime with one Make target:
+          Create a working directory, download the Compose file, and start Postgres plus the runtime:
         </DocParagraph>
         <DocCodeBlock
           language="bash"
           title="terminal"
-          code={`git clone ${RUNTIME_GITHUB_URL}.git
-cd runtime
-make dev-up`}
+          code={`mkdir phrony-runtime && cd phrony-runtime
+curl -fsSLO ${RUNTIME_DOCKER_COMPOSE_URL}
+docker compose up -d --wait`}
         />
         <DocParagraph>
-          Compose waits for Postgres to become healthy, builds <code>phrony-runtime</code>,
-          applies migrations, and listens on{' '}
-          <code>127.0.0.1:7777</code>. Stop the stack with{' '}
-          <code>make dev-down</code>.
+          Compose waits for Postgres to become healthy, pulls <code>{PHRONY_RUNTIME_IMAGE}</code>, applies migrations,
+          and listens on <code>127.0.0.1:7777</code>. Stop the stack with <code>docker compose down</code>.
         </DocParagraph>
+
+        <DocH3>Compose file</DocH3>
+        <DocParagraph>
+          The same file is available at{' '}
+          <a href={RUNTIME_DOCKER_COMPOSE_PATH} className="text-foreground underline underline-offset-4 hover:no-underline">
+            {RUNTIME_DOCKER_COMPOSE_PATH}
+          </a>{' '}
+          and in the{' '}
+          <a href={RUNTIME_GITHUB_URL} className="text-foreground underline underline-offset-4 hover:no-underline">
+            runtime repository
+          </a>{' '}
+          docs.
+        </DocParagraph>
+        <DocCodeBlock language="yaml" title="docker-compose.yml" code={RUNTIME_DOCKER_COMPOSE} />
 
         <DocInfo title="Configuration">
           <p>
-            <code>make</code> loads <code>.env</code> or{' '}
-            <code>.env.example</code> automatically. The compose runtime service sets
-            database URL, gRPC address, and a dev secrets encryption key—no extra setup for this quick start.
+            The compose runtime service sets database URL, gRPC address, and a dev secrets encryption key—no extra setup
+            for this quick start. Replace <code>RUNTIME_SECRETS_ENCRYPTION_KEY</code> before running agents with
+            secrets in production.
           </p>
         </DocInfo>
 
         <DocH2>Install the operator CLI</DocH2>
         <DocParagraph>
-          Build <code>phrony</code> and add it to your shell{' '}
+          Install <code>phrony</code> with Go and ensure <code>$(go env GOPATH)/bin</code> is on your{' '}
           <code>PATH</code>:
         </DocParagraph>
-        <DocCodeBlock language="bash" title="terminal" code="make install-cli" />
+        <DocCodeBlock
+          language="bash"
+          title="terminal"
+          code={`go build -o "$(go env GOPATH)/bin/phrony" \\
+  github.com/phrony-platform/runtime/cmd/cli@latest`}
+        />
         <DocParagraph>
-          Open a new terminal (or <code>source</code> your shell rc) so{' '}
-          <code>phrony</code> is available.
+          Or clone the{' '}
+          <a href={RUNTIME_GITHUB_URL} className="text-foreground underline underline-offset-4 hover:no-underline">
+            runtime repository
+          </a>{' '}
+          and run <code>make install-cli</code> if you are hacking on the daemon.
         </DocParagraph>
 
         <DocH2>Verify</DocH2>

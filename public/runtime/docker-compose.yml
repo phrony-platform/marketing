@@ -1,0 +1,28 @@
+services:
+  postgres:
+    image: postgres:16
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: phrony_runtime
+      POSTGRES_PASSWORD: phrony_runtime
+      POSTGRES_DB: phrony_runtime
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U phrony_runtime -d phrony_runtime"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  runtime:
+    image: ghcr.io/phrony-platform/phrony-runtime:latest
+    ports:
+      - "7777:7777"
+    environment:
+      RUNTIME_DATABASE_URL: postgres://phrony_runtime:phrony_runtime@postgres:5432/phrony_runtime?sslmode=disable
+      RUNTIME_GRPC_ADDR: 0.0.0.0:7777
+      # Dev-only placeholder; replace per environment (openssl rand -base64 32)
+      RUNTIME_SECRETS_ENCRYPTION_KEY: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+      RUNTIME_DISPATCH_QUEUE_WAIT: "5s"
+    depends_on:
+      postgres:
+        condition: service_healthy

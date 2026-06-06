@@ -53,11 +53,38 @@ The Node-based Phrony CLI used for manifest authoring and packaging is separate.
 ## Prerequisites
 
 - Docker Desktop or Docker Engine (recommended local path)
-- Go 1.25+ (only if you build or run binaries on your host)
+- Go 1.25+ (to install the operator CLI)
 
 <Card title="Quick start" href="/docs/quick-start">
   New to Phrony? Follow three steps: [set up the runtime](/docs/quick-start/setup-runtime), [write your first manifest](/docs/quick-start/write-manifest), then [publish, deploy, and run](/docs/quick-start/publish-deploy-run).
 </Card>
+
+## Run with Docker (recommended)
+
+The official runtime image is published to GitHub Container Registry as `ghcr.io/phrony-platform/phrony-runtime:latest` on each [GitHub release](https://github.com/phrony-platform/runtime/releases).
+
+Download the Compose file from [/runtime/docker-compose.yml](/runtime/docker-compose.yml) (or copy it from [src/content/runtime/docker-compose.yml](https://github.com/phrony-platform/marketing/blob/main/src/content/runtime/docker-compose.yml) in the docs repository), then start Postgres and the runtime:
+
+```bash
+mkdir phrony-runtime && cd phrony-runtime
+curl -fsSLO https://phrony.com/runtime/docker-compose.yml
+docker compose up -d --wait
+```
+
+The stack listens on **gRPC port 7777** (`127.0.0.1:7777` from your machine). Stop it with `docker compose down`.
+
+Install the operator CLI:
+
+```bash
+go build -o "$(go env GOPATH)/bin/phrony" \
+  github.com/phrony-platform/runtime/cmd/cli@latest
+```
+
+Then verify connectivity:
+
+```bash
+phrony status
+```
 
 ## Run the runtime on your host (development)
 
@@ -140,7 +167,7 @@ set -a && source .env && set +a
 | `PHRONY_NO_TUI` | `phrony` | Disable the interactive session TUI (plain stdout) |
 | `NO_COLOR` | `phrony agents diff` | Disable colorized diff output (also disabled when stdout is not a TTY). See [`diff`](/docs/runtime/cli/diff) |
 
-The compose `runtime` service sets its own `RUNTIME_DATABASE_URL` (hostname `postgres`), `RUNTIME_GRPC_ADDR=0.0.0.0:7777`, and a dev `RUNTIME_SECRETS_ENCRYPTION_KEY` in `docker-compose.yml`.
+The [Compose file](/runtime/docker-compose.yml) sets `RUNTIME_DATABASE_URL` (hostname `postgres`), `RUNTIME_GRPC_ADDR=0.0.0.0:7777`, and a dev `RUNTIME_SECRETS_ENCRYPTION_KEY` on the runtime service.
 
 Session provider API keys (for example `ANTHROPIC_API_KEY`) are resolved on the **operator host** when you run `phrony run`—from the shell environment, from `-e` / `--env-file`, or supplied by your backend in `RunSession`—not configured on the runtime daemon. See [`run`](/docs/runtime/cli/run) and [Secrets](/docs/agent-spec/resources/secrets).
 

@@ -45,8 +45,8 @@ export const QUICK_START_STEPS: QuickStartStep[] = [
     href: '/docs/quick-start/setup-runtime',
     summary: 'Start Postgres and the daemon, install the operator CLI, and confirm connectivity.',
     tasks: [
-      { id: 'setup-runtime:stack', label: 'Start the local stack with make dev-up' },
-      { id: 'setup-runtime:cli', label: 'Install phrony with make install-cli' },
+      { id: 'setup-runtime:stack', label: 'Start Postgres and runtime with docker compose up' },
+      { id: 'setup-runtime:cli', label: 'Install the phrony operator CLI' },
       { id: 'setup-runtime:verify', label: 'Verify with phrony status' },
     ],
   },
