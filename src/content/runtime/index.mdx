@@ -76,8 +76,8 @@ The stack listens on **gRPC port 7777** (`127.0.0.1:7777` from your machine). St
 Install the operator CLI:
 
 ```bash
-go build -o "$(go env GOPATH)/bin/phrony" \
-  github.com/phrony-platform/runtime/cmd/cli@latest
+go install github.com/phrony-platform/runtime/cmd/cli@latest
+mv -f "$(go env GOPATH)/bin/cli" "$(go env GOPATH)/bin/phrony"
 ```
 
 Then verify connectivity:
@@ -115,12 +115,14 @@ Install the runtime daemon with `go install`:
 go install github.com/phrony-platform/runtime/cmd/phrony-runtime@latest
 ```
 
-Install the operator CLI as `phrony` (the package path is `cmd/cli`, so use `go build -o`):
+Install the operator CLI as `phrony`:
 
 ```bash
-go build -o "$(go env GOPATH)/bin/phrony" \
-  github.com/phrony-platform/runtime/cmd/cli@latest
+go install github.com/phrony-platform/runtime/cmd/cli@latest
+mv -f "$(go env GOPATH)/bin/cli" "$(go env GOPATH)/bin/phrony"
 ```
+
+`go install` names the binary after the package directory (`cli`); rename it to `phrony` to match the operator CLI.
 
 Ensure `$(go env GOPATH)/bin` is on your `PATH`. You still need Postgres (and typically Docker Compose) unless you provide your own database URL.
 

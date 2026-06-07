@@ -90,8 +90,8 @@ docker compose up -d --wait`}
         <DocCodeBlock
           language="bash"
           title="terminal"
-          code={`go build -o "$(go env GOPATH)/bin/phrony" \\
-  github.com/phrony-platform/runtime/cmd/cli@latest`}
+          code={`go install github.com/phrony-platform/runtime/cmd/cli@latest
+mv -f "$(go env GOPATH)/bin/cli" "$(go env GOPATH)/bin/phrony"`}
         />
         <DocParagraph>
           Or clone the{' '}
