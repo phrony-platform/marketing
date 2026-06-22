@@ -2,7 +2,7 @@ import { ArrowRight, BookOpen, Github } from 'lucide-react';
 import Link from 'next/link';
 import { Fragment } from 'react';
 
-import { HeroLabels } from '@/components/hero-labels';
+import { InceptionProgramLabel } from '@/components/inception-program-label';
 import { HeroManifestIllustration } from '@/components/hero-manifest-illustration';
 import { documentationHref } from '@/lib/docs-url';
 import { heroDescription, heroTitleLines } from '@/lib/hero-title';
@@ -13,7 +13,6 @@ export function Hero() {
     <div id="hero" className="relative scroll-mt-24 border-b border-border/60 bg-background text-foreground">
       <section className="mx-auto grid w-full max-w-[1024px] grid-cols-1 items-center gap-12 px-5 py-16 md:px-8 md:py-20 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.95fr)] lg:gap-10 lg:py-24">
         <div className="min-w-0 text-center lg:text-left">
-          <HeroLabels />
           <h1 className="mx-auto max-w-full text-balance font-sans text-4xl font-bold tracking-tight text-foreground sm:text-5xl md:text-[2.75rem] md:leading-[1.12] lg:mx-0 lg:text-[3.25rem] lg:leading-[1.1]">
             {heroTitleLines.map((line, index) => (
               <Fragment key={index}>
@@ -53,6 +52,7 @@ export function Hero() {
               </Link>
             </div>
           </div>
+          <InceptionProgramLabel className="mt-10 md:mt-20" />
         </div>
 
         <div className="flex min-w-0 justify-center overflow-hidden lg:justify-end">

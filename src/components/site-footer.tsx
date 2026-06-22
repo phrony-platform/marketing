@@ -1,5 +1,6 @@
 import Link from 'next/link';
 
+import { InceptionProgramLabel } from '@/components/inception-program-label';
 import { PhronyLogo } from '@/components/phrony-logo';
 import { documentationHref } from '@/lib/docs-url';
 import { RUNTIME_GITHUB_URL } from '@/lib/project-urls';
@@ -60,9 +61,13 @@ export function SiteFooter() {
               </li>
             </ul>
           </nav>
+
+          <div className="sm:col-span-2 lg:col-span-4">
+            <InceptionProgramLabel className="justify-start" />
+          </div>
         </div>
 
-        <div className="mt-12 flex flex-col gap-3 border-t border-border pt-8 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mt-12 border-t border-border pt-8">
           <p className="text-sm text-muted-foreground">
             © {year} Phrony. Open specification and open-source runtime.
           </p>
