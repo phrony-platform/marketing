@@ -32,7 +32,7 @@ const parts = [
 
 const STORY_HEADER_OFFSET = 80;
 const STORY_HEADER_OFFSET_LG = 96;
-const STEP_END_BUFFER = 0.12;
+const STEP_SNAP_THRESHOLD = 0.5;
 const TRACK_HEIGHT_PER_STEP_SVH = 100;
 const FINAL_STEP_HOLD_SVH = 100;
 
@@ -44,13 +44,27 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
 }
 
+function mapScrollToBarProgress(progress: number) {
+  if (progress >= TRANSITION_PROGRESS_END) {
+    return 1;
+  }
+
+  const transitionProgress = progress / TRANSITION_PROGRESS_END;
+  const raw = transitionProgress * parts.length;
+  const stepIndex = Math.min(Math.floor(raw), parts.length - 1);
+  const localProgress = raw - stepIndex;
+  const steppedProgress = localProgress >= STEP_SNAP_THRESHOLD ? 1 : Math.round(localProgress * 100) / 100;
+
+  return (stepIndex + steppedProgress) / parts.length;
+}
+
 function mapScrollToActiveStep(progress: number) {
   if (progress >= TRANSITION_PROGRESS_END) {
     return parts.length - 1;
   }
 
   const transitionProgress = progress / TRANSITION_PROGRESS_END;
-  const raw = transitionProgress * (parts.length - 1);
+  const raw = transitionProgress * parts.length;
   const from = Math.min(Math.floor(raw), parts.length - 1);
 
   if (from >= parts.length - 1) {
@@ -58,9 +72,8 @@ function mapScrollToActiveStep(progress: number) {
   }
 
   const local = raw - from;
-  const snapPoint = 1 - STEP_END_BUFFER;
 
-  return local >= snapPoint ? from + 1 : from;
+  return local >= STEP_SNAP_THRESHOLD ? from + 1 : from;
 }
 
 function getStoryHeaderOffset() {
@@ -71,7 +84,9 @@ function getStoryHeaderOffset() {
   return window.matchMedia('(min-width: 1024px)').matches ? STORY_HEADER_OFFSET_LG : STORY_HEADER_OFFSET;
 }
 
-function StepIndicator({ activeStep }: { activeStep: number }) {
+function StepIndicator({ activeStep, progress }: { activeStep: number; progress: number }) {
+  const barFill = clamp(Math.round(progress * 100) / 100, 0, 1);
+
   return (
     <div className="mb-10 flex flex-wrap items-center gap-x-5 gap-y-2 md:mb-12">
       {parts.map((part, index) => (
@@ -100,10 +115,9 @@ function StepIndicator({ activeStep }: { activeStep: number }) {
           </div>
       ))}
       <div className="relative ml-auto hidden h-px min-w-[4rem] flex-1 overflow-hidden bg-border sm:block">
-        <motion.div
-          className="h-full w-full origin-left bg-primary"
-          animate={{ scaleX: (activeStep + 1) / parts.length }}
-          transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+        <div
+          className="h-full w-full origin-left bg-primary transition-transform duration-300 ease-out motion-reduce:transition-none"
+          style={{ transform: `scaleX(${barFill})` }}
         />
       </div>
     </div>
@@ -176,6 +190,7 @@ export function ThreePartsScrollStory() {
   const containerRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
   const [activeStep, setActiveStep] = useState(0);
+  const [barProgress, setBarProgress] = useState(0);
 
   useEffect(() => {
     const updateActiveStep = () => {
@@ -190,8 +205,10 @@ export function ThreePartsScrollStory() {
       const scrolled = window.scrollY - scrollStart;
       const progress = clamp(scrolled / track.offsetHeight, 0, 1);
       const nextActiveStep = mapScrollToActiveStep(progress);
+      const nextBarProgress = Math.round(mapScrollToBarProgress(progress) * 100) / 100;
 
       setActiveStep((current) => (current === nextActiveStep ? current : nextActiveStep));
+      setBarProgress((current) => (current === nextBarProgress ? current : nextBarProgress));
     };
 
     updateActiveStep();
@@ -213,7 +230,7 @@ export function ThreePartsScrollStory() {
     <div ref={containerRef} className="relative mt-10 min-w-0 w-full">
       <div className="sticky top-20 z-10 flex min-h-[calc(100svh-5rem)] w-full flex-col justify-center bg-background py-8 lg:top-24 lg:min-h-[calc(100svh-6rem)] lg:py-10">
         <div className="mx-auto w-full max-w-[1024px] px-5 md:px-8">
-          <StepIndicator activeStep={activeStep} />
+          <StepIndicator activeStep={activeStep} progress={barProgress} />
         </div>
 
         <div className="relative grid min-h-0 w-full flex-1 grid-cols-1 items-stretch gap-10 lg:grid-cols-[minmax(0,7fr)_minmax(0,3fr)] lg:gap-14 xl:gap-16">
