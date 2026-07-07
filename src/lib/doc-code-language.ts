@@ -1,12 +1,52 @@
 export type DocCodeLanguage =
   | 'typescript'
   | 'javascript'
+  | 'python'
   | 'bash'
   | 'shell'
   | 'yaml'
   | 'json'
   | 'text'
   | 'plaintext';
+
+const DOC_CODE_LANGUAGES = new Set<DocCodeLanguage>([
+  'typescript',
+  'javascript',
+  'python',
+  'bash',
+  'shell',
+  'yaml',
+  'json',
+  'text',
+  'plaintext',
+]);
+
+export function normalizeDocCodeLanguage(language: string): DocCodeLanguage {
+  const normalized = language.toLowerCase().trim();
+
+  switch (normalized) {
+    case 'ts':
+    case 'tsx':
+      return 'typescript';
+    case 'js':
+    case 'jsx':
+      return 'javascript';
+    case 'py':
+      return 'python';
+    case 'sh':
+    case 'zsh':
+      return 'bash';
+    case 'yml':
+      return 'yaml';
+    case 'plaintext':
+      return 'text';
+    default:
+      if (DOC_CODE_LANGUAGES.has(normalized as DocCodeLanguage)) {
+        return normalized as DocCodeLanguage;
+      }
+      return 'text';
+  }
+}
 
 export function inferDocCodeLanguageFromFilename(filename: string | undefined): DocCodeLanguage | undefined {
   if (!filename) {
@@ -41,6 +81,7 @@ export function docCodeLanguageUsesHighlighter(language: DocCodeLanguage): boole
   switch (language) {
     case 'typescript':
     case 'javascript':
+    case 'python':
     case 'json':
     case 'yaml':
     case 'bash':

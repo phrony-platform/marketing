@@ -35,7 +35,7 @@ import {
 import { DocStep, DocSteps } from '@/components/docs/doc-steps';
 import { DocUpNext } from '@/components/docs/doc-up-next';
 import { DocMermaid } from '@/components/docs/doc-mermaid';
-import type { DocCodeLanguage } from '@/lib/doc-code-language';
+import { normalizeDocCodeLanguage } from '@/lib/doc-code-language';
 import { docLinkClass } from '@/lib/docs-typography';
 import { unwrapSingleMdxParagraph } from '@/lib/unwrap-single-mdx-paragraph';
 
@@ -83,7 +83,7 @@ function MdxPre({ children }: { children?: ReactNode }) {
     return <DocMermaid chart={code} />;
   }
 
-  return <DocCodeBlock language={language as DocCodeLanguage} code={code} />;
+  return <DocCodeBlock language={normalizeDocCodeLanguage(language)} code={code} />;
 }
 
 function MdxCode({ children, className, ...props }: ComponentProps<'code'>) {

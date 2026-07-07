@@ -18,6 +18,7 @@ const headerButtonBase =
 export function SiteHeader() {
   const pathname = usePathname();
   const inDocs = pathname.startsWith('/docs');
+  const inBlog = pathname.startsWith('/blog');
   const [mobileOpen, setMobileOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -90,6 +91,11 @@ export function SiteHeader() {
               Documentation
             </Link>
           ) : null}
+          {inBlog ? (
+            <Link href="/blog" className="truncate text-sm font-medium tracking-tight text-foreground">
+              Blog
+            </Link>
+          ) : null}
         </div>
 
         <div className="flex shrink-0 items-center gap-1.5 sm:gap-2 md:gap-3">
@@ -109,6 +115,14 @@ export function SiteHeader() {
             >
               <BookOpen className="size-4 shrink-0" strokeWidth={1.75} aria-hidden />
               Documentation
+            </Link>
+          ) : null}
+          {!inBlog ? (
+            <Link
+              href="/blog"
+              className={`${headerButtonBase} border border-border bg-transparent text-foreground hover:bg-muted`}
+            >
+              Blog
             </Link>
           ) : null}
           <button
@@ -149,6 +163,11 @@ export function SiteHeader() {
                 <li>
                   <Link href="/about" className={mobileLinkClass} onClick={closeMobile}>
                     About
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/blog" className={mobileLinkClass} onClick={closeMobile}>
+                    Blog
                   </Link>
                 </li>
                 <li>

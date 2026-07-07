@@ -5,6 +5,7 @@ import './globals.css';
 
 import { GoogleAnalytics } from '@/components/google-analytics';
 import { heroTitle } from '@/lib/hero-title';
+import { PHRONY_DOCS_ORIGIN } from '@/lib/project-urls';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -17,6 +18,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(PHRONY_DOCS_ORIGIN),
   title: {
     default: 'Phrony',
     template: '%s · Phrony',

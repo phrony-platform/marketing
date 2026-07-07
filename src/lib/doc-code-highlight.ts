@@ -3,6 +3,7 @@ import {
   type DocCodeLanguage,
 } from '@/lib/doc-code-language';
 import { highlightBash } from '@/lib/highlight-bash';
+import { highlightPython } from '@/lib/highlight-python';
 import { highlightYaml } from '@/lib/highlight-yaml';
 import { highlight } from 'sugar-high';
 
@@ -26,6 +27,8 @@ export function highlightDocCode(code: string, language: DocCodeLanguage): strin
       return highlight(code);
     case 'yaml':
       return highlightYaml(code);
+    case 'python':
+      return highlightPython(code);
     case 'bash':
     case 'shell':
       return highlightBash(code);
@@ -56,6 +59,8 @@ export function docCodeLanguageLabel(language: DocCodeLanguage): string {
       return 'TypeScript';
     case 'javascript':
       return 'JavaScript';
+    case 'python':
+      return 'Python';
     case 'bash':
     case 'shell':
       return 'Shell';

@@ -5,6 +5,7 @@ import {
   docCodeBlockThemeClass,
   inferDocCodeLanguageFromFilename,
   isShellDocCodeLanguage,
+  normalizeDocCodeLanguage,
   type DocCodeLanguage,
 } from '@/lib/doc-code-language';
 import {
@@ -18,7 +19,7 @@ export type { DocCodeLanguage };
 
 type Props = {
   code: string;
-  language?: DocCodeLanguage;
+  language?: DocCodeLanguage | string;
   /** Shown in the panel header (e.g. `agent.yaml`, `terminal`). */
   title?: string;
   /** Alias for `title`. */
@@ -40,7 +41,7 @@ export function DocCodeBlock({
   showShellPrompt = true,
 }: Props) {
   const headerLabel = title ?? filename;
-  const language = inferDocCodeLanguageFromFilename(headerLabel) ?? languageProp;
+  const language = inferDocCodeLanguageFromFilename(headerLabel) ?? normalizeDocCodeLanguage(languageProp);
   const isShell = isShellDocCodeLanguage(language);
   const themeClass = docCodeBlockThemeClass(language);
 
