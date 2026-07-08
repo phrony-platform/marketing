@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 
@@ -78,7 +79,22 @@ export function BlogPostCard({ post, featured = false }: BlogPostCardProps) {
         </div>
 
         <div className="mt-6 flex items-center justify-between gap-4 border-t border-border/60 pt-5">
-          {post.author ? <span className="text-sm text-muted-foreground">{post.author}</span> : <span />}
+          {post.author ? (
+            <span className="inline-flex items-center gap-2 text-sm text-muted-foreground">
+              {post.authorImage ? (
+                <Image
+                  src={post.authorImage}
+                  alt=""
+                  width={20}
+                  height={20}
+                  className="size-5 shrink-0 rounded-full object-cover ring-1 ring-border/60"
+                />
+              ) : null}
+              {post.author}
+            </span>
+          ) : (
+            <span />
+          )}
           <span className="inline-flex items-center gap-1.5 text-sm font-medium text-foreground opacity-0 transition-all group-hover:translate-x-0.5 group-hover:opacity-100">
             Read
             <ArrowRight className="size-3.5" strokeWidth={2} aria-hidden />

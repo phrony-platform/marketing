@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import { Calendar, Clock, User } from 'lucide-react';
 
 import type { BlogPostMeta } from '@/lib/blog';
@@ -19,8 +20,18 @@ export function BlogPostMetaRow({ post, className, showReadingTime = true }: Blo
         <time dateTime={post.date}>{formatBlogDate(post.date)}</time>
       </span>
       {post.author ? (
-        <span className="inline-flex items-center gap-1.5">
-          <User className="size-3.5 shrink-0 opacity-70" strokeWidth={2} aria-hidden />
+        <span className="inline-flex items-center gap-2">
+          {post.authorImage ? (
+            <Image
+              src={post.authorImage}
+              alt=""
+              width={24}
+              height={24}
+              className="size-6 shrink-0 rounded-full object-cover ring-1 ring-border/60"
+            />
+          ) : (
+            <User className="size-3.5 shrink-0 opacity-70" strokeWidth={2} aria-hidden />
+          )}
           <span>{post.author}</span>
         </span>
       ) : null}

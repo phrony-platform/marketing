@@ -11,6 +11,8 @@ export type BlogPostFrontmatter = {
   /** ISO date string, e.g. `2026-07-08`. */
   date: string;
   author?: string;
+  /** Public path to the author avatar, e.g. `/emad-profile.png`. */
+  authorImage?: string;
   tags?: string[];
   /** When true, the post is omitted from the index and static routes in production. */
   draft?: boolean;
@@ -51,6 +53,7 @@ function parsePostFile(filename: string): BlogPostMeta | null {
     description: String(data.description ?? ''),
     date: String(data.date ?? ''),
     author: data.author ? String(data.author) : undefined,
+    authorImage: data.authorImage ? String(data.authorImage) : undefined,
     tags: Array.isArray(data.tags) ? data.tags.map(String) : undefined,
     draft: Boolean(data.draft),
     readingTimeMinutes: getReadingTimeMinutes(content),

@@ -16,6 +16,7 @@ export function BlogPostJsonLd({ post, url }: BlogJsonLdProps) {
       ? {
           '@type': 'Person',
           name: post.author,
+          ...(post.authorImage ? { image: post.authorImage } : {}),
         }
       : {
           '@type': 'Organization',
