@@ -1,17 +1,26 @@
 ---
 title: "Why AI Agents Need a Runtime, Not Just a Framework"
-description: "Frameworks solve the build problem. Production agents fail on the run problem — state, limits, escalation, evidence. That's a runtime's job."
+description: "Building agents is solved. Governing, versioning, approving, auditing, and operating them once they touch real systems is not — and that's a runtime's job, not a framework's."
 slug: "why-ai-agents-need-a-runtime-not-just-a-framework"
 date: "2026-07-08"
 author: "Phrony Team"
 tags: ["ai-agents", "runtime", "infrastructure", "governance", "llmops"]
 ---
 
-It's 2:14 AM. Your invoice-processing agent has been running for forty minutes. Somewhere between "extract line items" and "post to the ERP", the pod it was running on got recycled. The run is gone. Not paused — gone. There's no checkpoint, no session state, no record of which invoices were posted and which weren't. Your logs show a stack trace from an HTTP client. The model's reasoning that led to that call? Never persisted.
+The agent works. That's not the problem.
 
-You rebuilt this agent three times already — once on a workflow tool, once as a Python script, once on the framework everyone recommended that quarter. Every version had the same demo and the same 2 AM.
+Your team built it in a sprint — a support agent that reads tickets, looks up accounts, and issues refunds. The demo landed. Leadership loved it. Then it went to deployment review, and the questions started:
 
-This isn't a framework problem. You could pick a better framework and hit the same wall, because the wall isn't in the build phase. It's in execution. And execution is what a **runtime** owns.
+*"Show us every action it can take, and prove it can't exceed these limits."*
+*"Where does a human approve the risky ones — and where's the record of that approval?"*
+*"Which version is running in production right now? Who changed its permissions last month?"*
+*"How many agents like this do we have, actually?"*
+
+Nobody in the room could answer. Not because the engineers were sloppy — because the answers don't exist anywhere. The agent's permissions are environment variables in a repo. Its "limits" are an if-statement someone could delete in the next commit. Its audit trail is application logs. Its version is whatever was on `main`. The project didn't fail; it stalled — parked in permanent pilot, next to the other three agents other teams built the same quarter, each on a different framework, none of them inventoried anywhere.
+
+This is the actual state of enterprise agents in 2026, and the numbers say it's the norm, not the exception. PwC finds 79% of executives report agents already being adopted in their companies — while trust collapses precisely for higher-stakes tasks like financial transactions. Deloitte's 2026 research expects three-quarters of companies to be using agents at least moderately by 2027, yet finds roughly 80% lack mature agentic governance: decision boundaries, approval rules, monitoring, audit trails. McKinsey's agentic-security guidance reads like a spec nobody has implemented — lifecycle governance, ownership, escalation triggers, agent portfolios, logging, controls on agent-to-tool interactions.
+
+Notice what's *not* on that list of gaps: building agents. That problem is solved several times over — OpenAI Agents SDK, LangGraph, CrewAI, Bedrock Agents, your own internal framework. The gap is everything that comes after the demo: **how you deploy, version, govern, approve, audit, and operate agents once they touch real systems.** Frameworks can't close that gap — not because they're immature, but because it isn't their job. It's a **runtime**'s job.
 
 ## A short history: we've solved this problem before
 
@@ -23,7 +32,9 @@ Every generation of software has gone through the same arc: code first, environm
 
 **2010s: servers → containers → orchestrators.** Docker standardized the artifact; Kubernetes made the environment declarative. You stopped SSH-ing into boxes and started writing manifests describing desired state — replicas, resource limits, health checks — with a control loop enforcing them. The manifest, not the shell session, became the source of truth.
 
-**2020s: LLM calls → agents → ???** We're mid-arc. The first wave (2022–23) was chat: a model behind a textbox. The second wave (2023–25) was frameworks — abstractions for tool use, memory, and multi-step reasoning. They made agents *buildable*. What they didn't make agents is *operable*. The 2 AM story above is the evidence: we're running 2020s workloads with a pre-runtime mindset, the agent equivalent of raw programs before the OS.
+**2020s: LLM calls → agents → ???** We're mid-arc. The first wave (2022–23) was chat: a model behind a textbox. The second wave (2023–25) was frameworks — abstractions for tool use, memory, and multi-step reasoning. They made agents *buildable*. What they didn't make agents is *operable*. The deployment review above is the evidence: agents touching production systems, governed like weekend scripts — the agent equivalent of raw programs before the OS.
+
+There's a useful contrast hiding in this history. Enterprises already treat everything else that matters as a governed, declared artifact: infrastructure is Terraform, access is IAM policies, APIs are OpenAPI schemas, deployments are Kubernetes manifests. Each has an owner, a version, a review process, and an enforcement point. Agents — software that autonomously acts on those very systems — are somehow the one thing still living as scattered application code. That asymmetry is the gap, and it won't survive contact with the first serious audit.
 
 The pattern is consistent: when software gains autonomy and consequence, the industry answers with an execution environment. Agents have gained both. The answer is due.
 
@@ -44,6 +55,8 @@ The distinction sounds academic until you ask operational questions:
 | Who changed this agent's permissions, and when? | `git log` across five repos | `phrony agents diff` between published versions, with an audit identity on every publish and deploy |
 
 Every framework answer depends on developer discipline. Every runtime answer is a property of the environment. That's the whole argument; the rest of this post is its consequences.
+
+One architectural point deserves emphasis, because it's where enterprise instincts and the design meet: **the runtime does not execute your business logic.** It mediates tool calls — evaluates policies at dispatch, hands the call to a tool worker or an MCP-backed tool, records the invocation in a durable ledger, and returns the result to the model. Your tools keep running where they already run, in whatever language they're written in. This matters because no enterprise wants an LLM runtime directly executing arbitrary business code inside itself; what they want is a control plane that governs access to systems they already have. That's the shape: the runtime is the checkpoint every action passes through, not a new place your code has to live.
 
 ## The entity model: why "agent = versioned manifest" is the right abstraction
 
@@ -216,7 +229,7 @@ A denied call never dispatches — it returns a `tool_result` error to the model
 
 ### Mistake 4: The half-finished mutation
 
-**Scenario.** The invoice agent from the intro: 7 of 12 invoices posted before the pod died. With no session state, your options are all bad — re-run everything (double-posts), run nothing (missing invoices), or reconcile by hand at 3 AM.
+**Scenario.** An invoice-processing agent posts 7 of 12 invoices to the ERP, and then the pod it runs on gets recycled mid-run. With the run's state living in your application's memory, your options are all bad — re-run everything (double-posts), run nothing (missing invoices), or reconcile by hand at 3 AM. Worse: there's no record distinguishing what was posted from what was merely attempted.
 
 **Mitigation.** Sessions and their tool invocations are runtime-owned and recorded in Postgres, not held in your application's memory. The runtime records every invocation as part of dispatch, has explicit failure-mode handling and durable recovery for tool calls, and a session that's waiting on something — a slow tool, a human approval — is a *suspended session*, not a stuck process. That's also what makes real human-in-the-loop possible at all: the spec gives approval waits their own budget (`max_hitl_wait_minutes`), separate from wall-clock, because a run that's waiting four hours for a human is a normal state the environment must model — not a timeout bug.
 
@@ -314,6 +327,8 @@ None of this is anti-framework. Inside a run you still want good abstractions �
 **Where do your agents live? Who is watching them? What happens when one goes wrong?**
 
 A framework has no answer, structurally — it dissolved into your binary at build time. A runtime is the answer: an entity declared in a versioned manifest, frozen at publish, executed in sessions with run-wide limits, policies enforced at dispatch before anything real happens, humans in the loop with recorded decisions, and structured traces as a byproduct of execution — on an open spec you can inspect and a reference runtime you can operate yourself.
+
+Go back to that deployment review. With the agent as a Phrony bundle, every question has a one-line answer: its actions and limits are the manifest and its policies; approvals are recorded decisions with named approvers; the production version is whatever's deployed, immutably; permission changes are `phrony agents diff` with an audit identity attached; and the agent inventory is the runtime's list of deployed entities. The review that killed the project becomes a formality.
 
 Every previous generation of consequential software got its environment. Agents are getting theirs. The teams that adopt it early won't just have safer agents — they'll be the ones allowed to run agents at all, in the rooms where it matters most.
 
