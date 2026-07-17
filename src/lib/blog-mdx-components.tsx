@@ -1,9 +1,9 @@
 import type { ComponentProps, ReactElement, ReactNode } from 'react';
 import { Children, isValidElement } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
 
-import { DocCodeBlock } from '@/components/docs';
+import { BlogExpandableImage } from '@/components/blog/blog-expandable-image';
+import { DocCallout, DocCodeBlock, DocInfo, DocNote } from '@/components/docs';
 import {
   BlogH2,
   BlogH3,
@@ -24,6 +24,10 @@ import {
 import { normalizeDocCodeLanguage } from '@/lib/doc-code-language';
 import { blogLinkClass } from '@/lib/blog-typography';
 import { cn } from '@/lib/utils';
+
+function isMeaningfulNode(node: ReactNode): boolean {
+  return !(typeof node === 'string' && node.trim() === '');
+}
 
 function MdxLink({ href, children, ...props }: ComponentProps<'a'>) {
   if (!href) {
@@ -103,23 +107,7 @@ function MdxImg({ src, alt, title }: ComponentProps<'img'>) {
   }
 
   if (src.startsWith('/')) {
-    return (
-      <figure className="my-10 overflow-hidden rounded-xl border border-border/80">
-        <Image
-          src={src}
-          alt={alt ?? ''}
-          title={title}
-          width={1200}
-          height={630}
-          className="h-auto w-full"
-        />
-        {alt ? (
-          <figcaption className="border-t border-border/60 bg-muted/15 px-4 py-3 text-center text-sm text-muted-foreground">
-            {alt}
-          </figcaption>
-        ) : null}
-      </figure>
-    );
+    return <BlogExpandableImage src={src} alt={alt} title={title} />;
   }
 
   return (
@@ -135,11 +123,24 @@ function MdxImg({ src, alt, title }: ComponentProps<'img'>) {
   );
 }
 
+// MDX wraps standalone images in <p>; MdxImg renders <figure>, which is invalid inside <p>.
+function MdxParagraph({ children, className }: ComponentProps<'p'>) {
+  const nodes = Children.toArray(children).filter(isMeaningfulNode);
+  if (nodes.length === 1 && isValidElement(nodes[0]) && nodes[0].type === MdxImg) {
+    return nodes[0];
+  }
+
+  return <BlogParagraph className={className}>{children}</BlogParagraph>;
+}
+
 export const blogMdxComponents = {
+  Note: DocNote,
+  Info: DocInfo,
+  Tip: (props: ComponentProps<typeof DocCallout>) => <DocCallout variant="tip" {...props} />,
   h2: BlogH2,
   h3: BlogH3,
   h4: BlogH4,
-  p: BlogParagraph,
+  p: MdxParagraph,
   ul: ({ children, className }: ComponentProps<'ul'>) => <BlogList className={className}>{children}</BlogList>,
   ol: ({ children, className }: ComponentProps<'ol'>) => (
     <BlogList ordered className={className}>

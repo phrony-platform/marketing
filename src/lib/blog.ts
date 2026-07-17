@@ -14,11 +14,13 @@ export type BlogPostFrontmatter = {
   /** Public path to the author avatar, e.g. `/emad-profile.png`. */
   authorImage?: string;
   tags?: string[];
+  /** Override auto-computed reading time (minutes). */
+  readingTimeMinutes?: number;
   /** When true, the post is omitted from the index and static routes in production. */
   draft?: boolean;
 };
 
-export type BlogPostMeta = BlogPostFrontmatter & {
+export type BlogPostMeta = Omit<BlogPostFrontmatter, 'readingTimeMinutes'> & {
   slug: string;
   readingTimeMinutes: number;
 };
@@ -47,6 +49,11 @@ function parsePostFile(filename: string): BlogPostMeta | null {
   const raw = readFileSync(join(contentRoot, filename), 'utf8');
   const { data, content } = matter(raw);
 
+  const readingTimeOverride =
+    typeof data.readingTimeMinutes === 'number' && data.readingTimeMinutes > 0
+      ? Math.round(data.readingTimeMinutes)
+      : undefined;
+
   const post: BlogPostMeta = {
     slug,
     title: String(data.title ?? slug),
@@ -56,7 +63,7 @@ function parsePostFile(filename: string): BlogPostMeta | null {
     authorImage: data.authorImage ? String(data.authorImage) : undefined,
     tags: Array.isArray(data.tags) ? data.tags.map(String) : undefined,
     draft: Boolean(data.draft),
-    readingTimeMinutes: getReadingTimeMinutes(content),
+    readingTimeMinutes: readingTimeOverride ?? getReadingTimeMinutes(content),
   };
 
   if (!post.date) {

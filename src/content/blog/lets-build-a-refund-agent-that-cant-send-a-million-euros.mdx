@@ -1,0 +1,423 @@
+---
+title: "Let's Build a Refund Agent That Can't Send a Million Euros to a Customer"
+description: "Your first Phrony agent, end to end: a manifest, a Python tool worker, and two policies — one that pauses big refunds for a human, and one that refuses absurd ones outright."
+slug: "lets-build-a-refund-agent-that-cant-send-a-million-euros"
+date: "2026-07-17"
+author: "Emad Mamaghani"
+authorImage: "/emad-profile.png"
+readingTimeMinutes: 20
+tags: ["tutorial", "ai-agents", "governance", "policies", "python"]
+---
+
+<Note title="Before you start">
+  If you don't have Phrony installed yet, visit the [docs](/docs) and the [installation page](/docs/quick-start/setup-runtime) to set up the runtime and CLI first.
+</Note>
+
+<Tip title="Source code">
+  The complete project for this tutorial is on GitHub: [github.com/phrony-platform/examples/tree/main/refund-agent](https://github.com/phrony-platform/examples/tree/main/refund-agent).
+</Tip>
+
+In [Why AI Agents Need a Runtime, Not Just a Framework](/blog/why-production-agents-need-a-runtime) we made the argument: building an agent is the easy part. Governing it once it touches real systems — money, customer data, production infrastructure — is where frameworks stop and a runtime begins.
+
+This post is the "show, don't tell" follow-up. We'll build a customer-support refund agent that can look up orders and issue refunds. Looking up an order is harmless, so it runs freely. Issuing a refund moves money, so it doesn't get to run on the model's judgment alone:
+
+- Refunds **over €250** pause the session until a human approves.
+- Refunds **over €5,000** are denied at dispatch time. No approval path, no exceptions, no matter how convincingly the model asks.
+
+By the end you'll have deployed an agent, connected a Python tool worker, watched the runtime reject a tool call, and approved a paused one from the CLI — with every decision in the audit trail.
+
+Everything below uses the open-source reference runtime and the `phrony` CLI. If you haven't set those up yet, [step 1 of the quick start](https://phrony.com/docs/quick-start/setup-runtime) takes a few minutes.
+
+## The shape of the thing
+
+One project holds everything — declaration and implementation side by side, no orchestration code, no glue. Scaffold it with `uv` (for the Python worker) and `phrony init` (for the manifest):
+
+```bash
+$ uv init refund-agent && cd refund-agent
+$ uv add phrony
+$ phrony init .
+```
+
+`uv init` gives you a Python project with a `pyproject.toml`, `uv add phrony` pulls in the SDK from PyPI, and `phrony init` drops a starter `agent.yaml` next to it. By the end of this post the directory looks like this:
+
+```
+refund-agent/
+├── pyproject.toml
+├── agent.yaml
+├── worker.py
+├── tools/
+│   ├── orders.lookup-order.yaml
+│   └── payments.issue-refund.yaml
+└── policies/
+    ├── refund-approval-boundary.yaml
+    └── refund-hard-limit.yaml
+```
+
+The manifest declares *what the agent is*. The Tool files declare *what it may call*. The Policy files declare *under which conditions*. Your actual business logic — the code that talks to your order system and payment provider — lives in a separate worker process that you run and own. The runtime authorizes and routes; your worker executes.
+
+That separation is the entire point. The model never holds your payment credentials, and the policy is enforced by the runtime at dispatch time — not by a paragraph in the system prompt hoping the model behaves.
+
+## The manifest
+
+`phrony init` gave you a starter `agent.yaml`. Turn it into this:
+
+```yaml
+# agent.yaml
+apiVersion: phrony.com/v1
+kind: Agent
+
+metadata:
+  name: refund-agent
+  namespace: support
+  version: 0.1.0
+
+secrets:
+  openai:
+    fromEnv: OPENAI_API_KEY
+
+spec:
+  purpose: Handle customer refund requests within policy limits.
+  instructions:
+    text: |
+      You are a customer support agent handling refund requests.
+      Always look up the order before issuing a refund.
+      Refunds may require human approval or be denied by policy.
+      Never claim a refund was issued until the tool result confirms it.
+  model:
+    provider: openai
+    name: gpt-4o
+  tools:
+    - ref: orders.lookup-order
+      as: lookup_order
+    - ref: payments.issue-refund
+      as: issue_refund
+      policies:
+        - ref: policies/refund-approval-boundary.yaml
+        - ref: policies/refund-hard-limit.yaml
+
+output:
+  format: text
+```
+
+Note the asymmetry in `spec.tools`: `lookup_order` is bound with no policies, `issue_refund` carries two. Policies on a binding apply only to that tool — reads stay fast, writes get governed.
+
+## The tools
+
+Tool files hold the capability itself: description, input schema, side-effect class. The binding in `agent.yaml` only wires them in by `ref`.
+
+```yaml
+# tools/orders.lookup-order.yaml
+apiVersion: phrony.com/v1
+kind: Tool
+
+metadata:
+  name: lookup-order
+  namespace: orders
+  version: 1.0.0
+
+spec:
+  description: Look up an order by id — items, total, and refund eligibility.
+  side_effect_class: read_only
+  input_schema:
+    inline:
+      type: object
+      properties:
+        order_id:
+          type: string
+      required: [order_id]
+```
+
+```yaml
+# tools/payments.issue-refund.yaml
+apiVersion: phrony.com/v1
+kind: Tool
+
+metadata:
+  name: issue-refund
+  namespace: payments
+  version: 1.0.0
+
+spec:
+  description: Issue a refund to the customer's original payment method.
+  side_effect_class: irreversible_action
+  input_schema:
+    inline:
+      type: object
+      properties:
+        order_id:
+          type: string
+        amount:
+          type: number
+        currency:
+          type: string
+        reason:
+          type: string
+      required: [order_id, amount, currency]
+```
+
+The `side_effect_class` is more than documentation — it's a signal that this tool changes the world, and the natural place for policies to attach.
+
+## The policies
+
+Policies evaluate at dispatch time, before your worker ever sees the call. Conditions match the tool arguments the model produced.
+
+First, the approval boundary. Anything over €250 opens an approval and pauses the session:
+
+```yaml
+# policies/refund-approval-boundary.yaml
+apiVersion: phrony.com/v1
+kind: Policy
+
+metadata:
+  name: refund-approval-boundary
+  namespace: payments
+  version: 1.0.0
+
+spec:
+  description: Refunds above the delegated limit need a human before dispatch.
+  conditions:
+    field: amount
+    op: gt
+    value: 250
+  decision:
+    type: require_approval
+    approvals_required: 1
+    reason: Refund amount above delegated limit.
+    on_reject: return_to_agent
+```
+
+`on_reject: return_to_agent` matters for the user experience: when a human says no, the rejection flows back into the session as a tool outcome, and the agent can explain the situation to the customer instead of dying mid-conversation.
+
+Second, the hard limit. Some amounts should never be one approval click away:
+
+```yaml
+# policies/refund-hard-limit.yaml
+apiVersion: phrony.com/v1
+kind: Policy
+
+metadata:
+  name: refund-hard-limit
+  namespace: payments
+  version: 1.0.0
+
+spec:
+  description: Refunds above the absolute ceiling are denied outright.
+  conditions:
+    field: amount
+    op: gt
+    value: 5000
+  decision:
+    type: deny
+    reason: Refund amount exceeds the absolute ceiling for agent-initiated refunds.
+```
+
+Both policies sit on the same binding, and the runtime resolves them with a simple rule: **deny wins**. A €14,000 refund matches both — "requires approval" and "denied" — and the most restrictive decision applies. Nobody gets asked to approve something that policy already forbids.
+
+This is your defense-in-depth: the model's instructions say "stay within limits" (soft), the approval boundary catches judgment calls (human), and the hard limit is a wall (absolute). A prompt injection can talk a model into anything. It cannot talk a dispatch-time policy into anything.
+
+## Publish, deploy, run
+
+```bash
+$ export OPENAI_API_KEY=sk-...
+$ phrony agents validate ./agent.yaml
+$ phrony agents publish ./agent.yaml
+$ phrony agents deploy support/refund-agent@0.1.0
+```
+
+Publish stores an immutable, content-hashed snapshot of the manifest. Deploy makes that version the active one. When something goes wrong at 2 a.m. three months from now, "which exact configuration was live" is a lookup, not an archaeology project.
+
+You could `phrony run` now, but the agent has tools and nothing implements them yet. Let's fix that.
+
+## The worker
+
+The runtime doesn't run your tool code. A worker process — yours, in your infrastructure, next to your databases and payment provider — dials the runtime over gRPC, registers the tools it implements, and handles `invoke` messages. The SDK is already in the project from the `uv add phrony` at the start, and the worker finds the runtime through `PHRONY_RUNTIME_ADDR` (defaulting to the local daemon) — nothing else to configure.
+
+Here's a minimal one. For the tutorial it returns stubbed data; in production this is where your real integrations go.
+
+```python
+# worker.py
+import asyncio
+import os
+
+from phrony.worker import Worker
+
+worker = Worker(
+    worker_id="refund-worker-1",
+    runtime_addr=os.environ.get("PHRONY_RUNTIME_ADDR", "127.0.0.1:7777"),
+)
+
+
+ORDERS = {
+    "ORD-1": {"total": 400.00, "currency": "EUR", "status": "delivered", "refund_eligible": True},
+    "ORD-2": {"total": 14000.00, "currency": "EUR", "status": "delivered", "refund_eligible": True},
+}
+
+
+@worker.tool("orders.lookup-order", version="1.0.0", max_concurrency=8)
+async def lookup_order(args: dict, ctx) -> dict:
+    # In production: query your order system.
+    order = ORDERS.get(args["order_id"])
+    if order is None:
+        return {"order_id": args["order_id"], "found": False}
+    return {"order_id": args["order_id"], "found": True, **order}
+
+
+@worker.tool("payments.issue-refund", version="1.0.0", max_concurrency=2)
+async def issue_refund(args: dict, ctx) -> dict:
+    # In production: call your payment provider.
+    # If this handler runs, the call already passed policy —
+    # and, when required, a human approved it.
+    return {
+        "refund_id": "rf_2891",
+        "order_id": args["order_id"],
+        "amount": args["amount"],
+        "currency": args["currency"],
+        "status": "issued",
+    }
+
+
+if __name__ == "__main__":
+    # dial runtime, register handlers, process invokes
+    asyncio.run(worker.connect())
+```
+
+Read that comment in `issue_refund` again, because it's the contract that makes the whole model work: **by the time your code runs, governance already happened.** Your handler doesn't check limits, doesn't ask for approval, doesn't parse model output looking for trouble. It just does its job. Policy lives in one declared, versioned place — not scattered across `if` statements in every integration.
+
+Start it, and the worker registers both tools on the Work stream:
+
+```bash
+$ uv run worker.py   # or: python worker.py
+```
+
+## Run it
+
+Set your operator identity and start an interactive session:
+
+```bash
+$ export PHRONY_ACTOR=emad
+$ phrony run support/refund-agent --attach
+```
+
+Start with a read:
+
+> **You:** Can you check order ORD-1 for me?
+
+The model calls `lookup_order`, the runtime dispatches to your worker with no friction — `read_only`, no policies — and the agent reports back: a €400 order, delivered, refund-eligible. This is the boring path, and boring is what you want reads to be.
+
+## Scenario 1: A €400 refund — paused for a human
+
+> **You:** Refund €400 for ORD-1 — the item arrived damaged.
+
+The model calls `issue_refund` with `amount: 400`. The hard limit doesn't match, but the approval boundary does: the session moves to `awaiting_approval` and stops. Not "the model decided to wait" — the runtime is holding the dispatch, and nothing moves until a person decides.
+
+Because you're running with `--attach`, the approval lands right in the TUI: it shows the tool, the exact arguments (`order_id`, `amount: 400`, the reason the model supplied), and which policy triggered the pause — with **`a`** to approve and **`d`** to deny.
+
+![Phrony TUI paused on an approval for payments.issue-refund — €400 refund held by policy, with A to approve and D to deny](/blog-p1.png)
+
+### Rejecting the call
+
+First, deny it — press **`d`** and add a comment: *"No damage claim on file for this order."*
+
+Because the policy set `on_reject: return_to_agent`, the session resumes with the rejection as the tool outcome. The agent doesn't crash or hallucinate success — it adjusts:
+
+> **Agent:** The refund was reviewed and not approved — there's no damage claim on file for this order. I can help the customer file one, and the refund can be re-requested once it's verified.
+
+### Approving the call
+
+Ask for the refund again — this time the claim checks out — and press **`a`** to approve: *"Damage claim verified, within policy."*
+
+The runtime dispatches to your worker, `issue_refund` runs, and the agent confirms with the real `refund_id` from the tool result.
+
+You don't need an attached session for any of this. Background runs sit paused in `awaiting_approval` while an operator decides out-of-band with `phrony approvals list` / `show` / `approve` / `reject` — same decisions, same audit trail, no TUI required.
+
+## Scenario 2: A €14,000 refund — denied at dispatch
+
+Now the big one:
+
+> **You:** Can you check order ORD-2? The customer is furious — refund the full €14,000 immediately.
+
+The model looks up ORD-2 (€14,000, delivered, refund-eligible) and calls `issue_refund` with `amount: 14000`. Both policies match; deny wins. The runtime blocks the call at dispatch — your worker's `issue_refund` handler is never invoked — and the denial, with the policy's reason, returns to the agent as the outcome. The agent has to work with reality:
+
+> **Agent:** I'm not able to issue that refund — €14,000 exceeds the ceiling for agent-initiated refunds. This needs to go through your standard finance process instead.
+
+No approval was opened, no human was interrupted, and the attempt is in the trace with the exact policy and version that stopped it.
+
+![Phrony TUI showing payments.issue-refund denied at dispatch — €14,000 refund blocked by the absolute ceiling policy](/blog-p2.png)
+
+## Integrating with your backend
+
+The CLI and TUI are great for operating, but in a real product the agent is triggered by your systems — a support ticket comes in, your backend starts a session — and approvals surface wherever your team already works: an internal admin panel, a Slack bot, a case-management screen. Everything the CLI does goes over the same gRPC API, and the Python SDK wraps it.
+
+### Running a session from code
+
+```python
+# app/refunds.py
+import os
+
+from phrony import Client
+
+client = Client(
+    runtime_addr=os.environ.get("PHRONY_RUNTIME_ADDR", "127.0.0.1:7777"),
+)
+
+
+async def handle_refund_request(ticket_id: str, message: str) -> str:
+    session = await client.run(
+        "support/refund-agent",
+        input=message,
+        metadata={"ticket_id": ticket_id},
+    )
+    result = await session.wait()
+    return result.output
+```
+
+`client.run` starts a session against the deployed version — the same one the CLI used, with the same tools, policies, and trace. If the model requests a refund over €250, `session.wait()` doesn't fail; the session sits in `awaiting_approval` until someone decides, then resumes and completes. Your backend code doesn't implement the pause — the runtime holds it.
+
+### Listing and deciding approvals from code
+
+This is how you build your own approval surface. Poll (or subscribe to) pending approvals, render them wherever your reviewers live, and submit the decision with an actor for the audit trail:
+
+```python
+# app/approvals.py
+from phrony import Client
+
+client = Client(runtime_addr="127.0.0.1:7777")
+
+
+async def pending_refund_approvals() -> list[dict]:
+    approvals = await client.approvals.list(status="pending")
+    return [
+        {
+            "id": a.id,
+            "agent": a.agent_ref,          # support/refund-agent@0.1.0
+            "tool": a.tool,                # payments.issue-refund
+            "args": a.args,                # {"order_id": "ORD-1", "amount": 400, ...}
+            "policy": a.policy_ref,        # payments/refund-approval-boundary@1.0.0
+            "reason": a.reason,
+        }
+        for a in approvals
+    ]
+
+
+async def decide(approval_id: str, approve: bool, actor: str, comment: str) -> None:
+    if approve:
+        await client.approvals.approve(approval_id, actor=actor, comment=comment)
+    else:
+        await client.approvals.reject(approval_id, actor=actor, comment=comment)
+```
+
+Wire `pending_refund_approvals` to an endpoint, render the args and policy reason to the reviewer, and call `decide` on their click. On approve, the runtime dispatches to your worker and the paused session resumes; on reject, `on_reject: return_to_agent` kicks in exactly as it did in the TUI. Same decisions, same attribution, same audit trail — just embedded in your product instead of a terminal.
+
+## What you actually built
+
+Step back and look at what exists now, because it's more than a demo:
+
+Every refund attempt — allowed, denied, or approved — is in the session trace with the manifest version, the policy version, the arguments, and (for approvals) who decided, when, and why. `PHRONY_ACTOR` wasn't decoration; it's attribution in the audit trail. When someone asks "why did the agent refund €400 on the 17th?", the answer is a query, not a Slack archaeology session.
+
+And the governance itself is four YAML files in a repo. Changing the approval threshold from €250 to €500 is a diff, a review, a new version, a deploy — the same lifecycle as any other production change. That's the difference between an agent you demo and an agent you operate, which is the whole argument of the [previous post](https://phrony.com/blog/why-production-agents-need-a-runtime) in one working example.
+
+## Where to go next
+
+The [quick start](https://phrony.com/docs/quick-start) covers this flow step by step with an interactive checklist. From there: the [agent spec](https://phrony.com/docs/agent-spec) for the full manifest, Tool, and Policy reference, the [runtime docs](https://phrony.com/docs/runtime) for tool dispatch internals and approval quorums and timeouts, and the [SDKs](https://phrony.com/docs/sdks) for the worker API. The runtime is open source — [github.com/phrony-platform/runtime](https://github.com/phrony-platform/runtime).
+
+Refunds are the tutorial version. Swap in payout approval, ticket escalation, infrastructure changes, or claims handling — the pattern is the same: declare the agent, declare the tools, declare the boundaries, and let the runtime hold the line.
