@@ -325,38 +325,23 @@ export function DocsSearchTrigger({ className }: DocsSearchTriggerProps) {
   );
 }
 
-export function DocsSearchMobileLink({ onNavigate }: { onNavigate: () => void }) {
+export function DocsSearchIconButton({ className }: { className?: string }) {
   const [open, setOpen] = useState(false);
 
   return (
     <>
       <button
         type="button"
-        className="flex w-full items-center gap-3 rounded-md px-2 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
         onClick={() => setOpen(true)}
+        className={cn(
+          'inline-flex size-9 items-center justify-center rounded-md border border-border bg-background text-muted-foreground transition-colors hover:bg-muted hover:text-foreground',
+          className,
+        )}
+        aria-label="Search documentation"
       >
-        <span
-          className="flex size-9 shrink-0 items-center justify-center rounded-md border border-border/60 bg-muted/35 text-muted-foreground"
-          aria-hidden
-        >
-          <Search className="size-4" strokeWidth={1.75} />
-        </span>
-        <span className="min-w-0 text-left">
-          Search docs
-          <span className="mt-0.5 block text-xs font-normal text-muted-foreground">
-            Find pages, sections, and CLI commands.
-          </span>
-        </span>
+        <Search className="size-5" strokeWidth={1.75} aria-hidden />
       </button>
-      <DocsSearchDialog
-        open={open}
-        onOpenChange={(nextOpen) => {
-          setOpen(nextOpen);
-          if (!nextOpen) {
-            onNavigate();
-          }
-        }}
-      />
+      <DocsSearchDialog open={open} onOpenChange={setOpen} />
     </>
   );
 }

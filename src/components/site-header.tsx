@@ -6,7 +6,7 @@ import { BookOpen, Github, Menu, Newspaper, X, type LucideIcon } from 'lucide-re
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { PhronyLogo } from '@/components/phrony-logo';
-import { DocsSearchMobileLink, DocsSearchTrigger } from '@/components/docs/docs-search';
+import { DocsSearchIconButton, DocsSearchTrigger } from '@/components/docs/docs-search';
 import { documentationHref } from '@/lib/docs-url';
 import { PHRONY_GITHUB_ORG_URL } from '@/lib/project-urls';
 
@@ -158,7 +158,7 @@ export function SiteHeader() {
           <div className="min-w-0 flex-1" />
         )}
 
-        <div className="flex shrink-0 items-center justify-end gap-3">
+        <div className="ml-auto flex shrink-0 items-center justify-end gap-2 sm:gap-3">
           <div className="hidden items-center gap-3 md:flex">
             <a
               href={PHRONY_GITHUB_ORG_URL}
@@ -187,6 +187,8 @@ export function SiteHeader() {
               </Link>
             ) : null}
           </div>
+
+          {inDocs ? <DocsSearchIconButton className="md:hidden" /> : null}
 
           <button
             type="button"
@@ -223,11 +225,6 @@ export function SiteHeader() {
               aria-label="Primary"
             >
               <ul className="flex flex-col gap-1">
-                {inDocs ? (
-                  <li>
-                    <DocsSearchMobileLink onNavigate={closeMobile} />
-                  </li>
-                ) : null}
                 <li>
                   <MobileNavItem
                     href={documentationHref}
