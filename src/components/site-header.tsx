@@ -2,18 +2,69 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { BookOpen, Github, Menu, X } from 'lucide-react';
+import { BookOpen, Github, Menu, Newspaper, X, type LucideIcon } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { PhronyLogo } from '@/components/phrony-logo';
 import { documentationHref } from '@/lib/docs-url';
 import { PHRONY_GITHUB_ORG_URL } from '@/lib/project-urls';
 
-const mobileLinkClass =
-  'block rounded-md px-2 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted';
+const mobileNavItemClass =
+  'flex items-start gap-3 rounded-md px-2 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted';
 
 const headerButtonBase =
   'inline-flex shrink-0 items-center justify-center rounded-md px-3 py-2 text-xs font-medium transition-colors sm:px-4 sm:text-sm';
+
+function MobileNavItem({
+  href,
+  title,
+  description,
+  icon: Icon,
+  onNavigate,
+  external = false,
+}: {
+  href: string;
+  title: string;
+  description: string;
+  icon: LucideIcon;
+  onNavigate: () => void;
+  external?: boolean;
+}) {
+  const content = (
+    <>
+      <span
+        className="flex size-9 shrink-0 items-center justify-center rounded-md border border-border/60 bg-muted/35 text-muted-foreground"
+        aria-hidden
+      >
+        <Icon className="size-4" strokeWidth={1.75} />
+      </span>
+      <span className="min-w-0">
+        {title}
+        <span className="mt-0.5 block text-xs font-normal text-muted-foreground">{description}</span>
+      </span>
+    </>
+  );
+
+  if (external) {
+    return (
+      <a
+        href={href}
+        className={mobileNavItemClass}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={onNavigate}
+      >
+        {content}
+      </a>
+    );
+  }
+
+  return (
+    <Link href={href} className={mobileNavItemClass} onClick={onNavigate}>
+      {content}
+    </Link>
+  );
+}
 
 export function SiteHeader() {
   const pathname = usePathname();
@@ -86,19 +137,19 @@ export function SiteHeader() {
           {inDocs ? (
             <Link
               href={documentationHref}
-              className="truncate text-sm font-medium tracking-tight text-foreground"
+              className="hidden truncate text-sm font-medium tracking-tight text-foreground md:inline"
             >
               Documentation
             </Link>
           ) : null}
           {inBlog ? (
-            <Link href="/blog" className="truncate text-sm font-medium tracking-tight text-foreground">
+            <Link href="/blog" className="hidden truncate text-sm font-medium tracking-tight text-foreground md:inline">
               Blog
             </Link>
           ) : null}
         </div>
 
-        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2 md:gap-3">
+        <div className="hidden shrink-0 items-center gap-3 md:flex">
           <a
             href={PHRONY_GITHUB_ORG_URL}
             target="_blank"
@@ -125,22 +176,23 @@ export function SiteHeader() {
               Blog
             </Link>
           ) : null}
-          <button
-            type="button"
-            data-mobile-nav-trigger
-            className="inline-flex size-9 items-center justify-center rounded-md border border-border bg-background text-muted-foreground transition-colors hover:bg-muted hover:text-foreground md:hidden"
-            aria-expanded={mobileOpen}
-            aria-controls="mobile-primary-nav"
-            aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
-            onClick={() => setMobileOpen((o) => !o)}
-          >
-            {mobileOpen ? (
-              <X className="size-5" strokeWidth={1.75} aria-hidden />
-            ) : (
-              <Menu className="size-5" strokeWidth={1.75} aria-hidden />
-            )}
-          </button>
         </div>
+
+        <button
+          type="button"
+          data-mobile-nav-trigger
+          className="inline-flex size-9 items-center justify-center rounded-md border border-border bg-background text-muted-foreground transition-colors hover:bg-muted hover:text-foreground md:hidden"
+          aria-expanded={mobileOpen}
+          aria-controls="mobile-primary-nav"
+          aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
+          onClick={() => setMobileOpen((o) => !o)}
+        >
+          {mobileOpen ? (
+            <X className="size-5" strokeWidth={1.75} aria-hidden />
+          ) : (
+            <Menu className="size-5" strokeWidth={1.75} aria-hidden />
+          )}
+        </button>
       </div>
 
       {mobileOpen ? (
@@ -159,47 +211,34 @@ export function SiteHeader() {
               className="max-h-[calc(100dvh-4.25rem)] overflow-y-auto overscroll-contain px-5 py-4"
               aria-label="Primary"
             >
-              <ul className="flex flex-col gap-0.5">
+              <ul className="flex flex-col gap-1">
                 <li>
-                  <Link href="/about" className={mobileLinkClass} onClick={closeMobile}>
-                    About
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/blog" className={mobileLinkClass} onClick={closeMobile}>
-                    Blog
-                  </Link>
-                </li>
-                <li>
-                  <Link
+                  <MobileNavItem
                     href={documentationHref}
-                    className="flex items-start gap-3 rounded-md px-2 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
-                    onClick={closeMobile}
-                  >
-                    <span
-                      className="flex size-9 shrink-0 items-center justify-center rounded-md border border-border/60 bg-muted/35 text-muted-foreground"
-                      aria-hidden
-                    >
-                      <BookOpen className="size-4" strokeWidth={1.75} />
-                    </span>
-                    <span className="min-w-0">
-                      Documentation
-                      <span className="mt-0.5 block text-xs font-normal text-muted-foreground">
-                        Agent spec, runtime, and CLI guides.
-                      </span>
-                    </span>
-                  </Link>
+                    title="Documentation"
+                    description="Agent spec, runtime, and CLI guides."
+                    icon={BookOpen}
+                    onNavigate={closeMobile}
+                  />
                 </li>
                 <li>
-                  <a
+                  <MobileNavItem
+                    href="/blog"
+                    title="Blog"
+                    description="Product updates, engineering notes, and practical guidance."
+                    icon={Newspaper}
+                    onNavigate={closeMobile}
+                  />
+                </li>
+                <li>
+                  <MobileNavItem
                     href={PHRONY_GITHUB_ORG_URL}
-                    className={mobileLinkClass}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={closeMobile}
-                  >
-                    GitHub
-                  </a>
+                    title="GitHub"
+                    description="Runtime, SDKs, and open-source repositories."
+                    icon={Github}
+                    onNavigate={closeMobile}
+                    external
+                  />
                 </li>
               </ul>
             </nav>
