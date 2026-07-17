@@ -66,7 +66,26 @@ spec:
           type: string
       required: [city]`;
 
-/** Illustrative worker sample — TypeScript SDK shape for docs (Work stream under the hood). */
+/** Illustrative worker samples — SDK shape for docs (Work stream under the hood). */
+const workerSamplePython = `import os
+
+from phrony.worker import Worker
+
+worker = Worker(
+    worker_id="weather-worker-1",
+    runtime_addr=os.environ.get("PHRONY_RUNTIME_ADDR", "127.0.0.1:7777"),
+)
+
+
+@worker.tool("weather.get-forecast", version="1.0.0", max_concurrency=4)
+async def get_forecast(args: dict, ctx) -> dict:
+    # Your integration: HTTP API, database, internal service, etc.
+    city = args["city"]
+    return {"temp_c": 12, "conditions": "cloudy", "city": city}
+
+
+await worker.connect()  # dial runtime, register handlers, process invoke messages`;
+
 const workerSampleTs = `import { Worker } from "@phrony/sdk";
 
 const worker = new Worker({
@@ -152,10 +171,25 @@ phrony agents deploy default/my-agent@0.2.0`}
         </DocParagraph>
         <ToolDispatchIllustration />
         <DocParagraph>
-          A minimal TypeScript worker using the Phrony SDK connects to the runtime, registers{' '}
+          A minimal worker using the Phrony SDK connects to the runtime, registers{' '}
           <code>weather.get-forecast@1.0.0</code>, and runs your handler on each <code>invoke</code>:
         </DocParagraph>
-        <DocCodeBlock language="typescript" title="worker.ts" code={workerSampleTs} />
+        <DocInlineTabs
+          aria-label="Worker SDK examples"
+          defaultTabId="python"
+          tabs={[
+            {
+              id: 'python',
+              label: 'Python',
+              panel: <DocCodeBlock language="python" filename="worker.py" code={workerSamplePython} />,
+            },
+            {
+              id: 'typescript',
+              label: 'TypeScript',
+              panel: <DocCodeBlock language="typescript" filename="worker.ts" code={workerSampleTs} />,
+            },
+          ]}
+        />
         <DocParagraph>
           Dispatch flow, failure modes, and integrity checks:{' '}
           <Link

@@ -2,4 +2,6 @@
 export const sdkLanguageDescriptions: Record<string, string> = {
   TypeScript:
     '@phrony/sdk for Node.js 18+ — install, connect, run agents and bundles, stream sessions, and register workers.',
+  Python:
+    'phrony for Python 3.10+ — async gRPC client to run agents and bundles, stream sessions, and register workers.',
 };

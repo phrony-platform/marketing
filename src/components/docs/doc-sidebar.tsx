@@ -7,7 +7,8 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { docLabel } from '@/components/docs/doc-style';
 import type { DocNavLink, DocTab } from '@/lib/docs-navigation';
-import { isNavBranchActive, isNavLinkActive } from '@/lib/docs-path';
+import { DOC_SCROLL_OFFSET_PX, scrollToDocHeading } from '@/lib/docs-scroll';
+import { isNavBranchActive, isNavLinkActive, isSdkLanguagePath } from '@/lib/docs-path';
 import { resolveDocSidebarGroupPages } from '@/lib/typescript-sdk-nav';
 import { cn } from '@/lib/utils';
 
@@ -17,28 +18,36 @@ type Props = {
 
 function navLinkClassName(active: boolean) {
   return cn(
-    'block cursor-pointer rounded-sm px-2 py-1.5 text-sm transition-colors',
+    'block w-full cursor-pointer rounded-sm px-2 py-1.5 text-left text-sm transition-colors',
     active
       ? 'bg-muted font-medium text-foreground'
       : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground',
   );
 }
 
+function getHrefHash(href: string): string | undefined {
+  const hash = href.split('#')[1];
+  return hash || undefined;
+}
+
 function DocSidebarNavItem({
   page,
   pathname,
+  activeHash,
   onNavigate,
   depth = 0,
 }: {
   page: DocNavLink;
   pathname: string;
+  activeHash: string;
   onNavigate: () => void;
   depth?: number;
 }) {
   const hasChildren = (page.children?.length ?? 0) > 0;
-  const branchActive = isNavBranchActive(pathname, page);
-  const linkActive = isNavLinkActive(pathname, page.href);
+  const branchActive = isNavBranchActive(pathname, page, activeHash);
+  const linkActive = isNavLinkActive(pathname, page.href, activeHash);
   const [expanded, setExpanded] = useState(branchActive);
+  const hash = getHrefHash(page.href);
 
   useEffect(() => {
     if (branchActive) {
@@ -46,7 +55,30 @@ function DocSidebarNavItem({
     }
   }, [branchActive, pathname]);
 
+  const handleHashClick = () => {
+    if (hash) {
+      scrollToDocHeading(hash);
+    }
+    onNavigate();
+  };
+
   if (!hasChildren) {
+    if (hash) {
+      return (
+        <li>
+          <button
+            type="button"
+            className={navLinkClassName(linkActive)}
+            style={depth > 0 ? { paddingLeft: `${depth * 0.75 + 0.5}rem` } : undefined}
+            aria-current={linkActive ? 'true' : undefined}
+            onClick={handleHashClick}
+          >
+            {page.title}
+          </button>
+        </li>
+      );
+    }
+
     return (
       <li>
         <Link
@@ -108,6 +140,7 @@ function DocSidebarNavItem({
               key={child.href}
               page={child}
               pathname={pathname}
+              activeHash={activeHash}
               onNavigate={onNavigate}
               depth={depth + 1}
             />
@@ -118,9 +151,20 @@ function DocSidebarNavItem({
   );
 }
 
+const SDK_SECTION_IDS = [
+  'install',
+  'connect',
+  'run',
+  'interactive-session',
+  'worker',
+  'runtime-client',
+  'utilities',
+];
+
 export function DocSidebar({ tab }: Props) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [activeHash, setActiveHash] = useState('');
   const closeMobile = useCallback(() => setMobileOpen(false), []);
 
   useEffect(() => {
@@ -138,17 +182,60 @@ export function DocSidebar({ tab }: Props) {
     };
   }, [mobileOpen]);
 
+  useEffect(() => {
+    const readHash = () => setActiveHash(window.location.hash.replace(/^#/, ''));
+
+    readHash();
+    window.addEventListener('hashchange', readHash);
+    return () => window.removeEventListener('hashchange', readHash);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!isSdkLanguagePath(pathname)) {
+      return;
+    }
+
+    const elements = SDK_SECTION_IDS.map((id) => document.getElementById(id)).filter(
+      (element): element is HTMLElement => element != null,
+    );
+
+    if (elements.length === 0) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries.filter((entry) => entry.isIntersecting);
+        if (visible.length === 0) {
+          return;
+        }
+
+        visible.sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+        setActiveHash(visible[0].target.id);
+      },
+      {
+        rootMargin: `-${DOC_SCROLL_OFFSET_PX}px 0px -70% 0px`,
+        threshold: [0, 1],
+      },
+    );
+
+    elements.forEach((element) => observer.observe(element));
+
+    return () => observer.disconnect();
+  }, [pathname]);
+
   const nav = (
     <nav className="space-y-8" aria-label={`${tab.label} topics`}>
       {tab.groups.map((group) => (
         <div key={group.group}>
           <p className={cn(docLabel, 'px-2')}>{group.group}</p>
           <ul className="mt-2 flex flex-col gap-px">
-            {resolveDocSidebarGroupPages(tab.id, group).map((page) => (
+            {resolveDocSidebarGroupPages(tab.id, group, pathname).map((page) => (
               <DocSidebarNavItem
                 key={page.href}
                 page={page}
                 pathname={pathname}
+                activeHash={activeHash ? `#${activeHash}` : ''}
                 onNavigate={closeMobile}
               />
             ))}

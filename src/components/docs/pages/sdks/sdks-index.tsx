@@ -1,22 +1,14 @@
 import Link from 'next/link';
-import { Braces } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
 
 import { DocCard, DocCardGroup, DocH2, DocPage, DocParagraph, DocProse } from '@/components/docs';
+import { SdkLanguageLogo } from '@/components/docs/language-logos';
 import { docLabel } from '@/components/docs/doc-style';
-import { DOC_TABS, type DocNavGroup } from '@/lib/docs-navigation';
 import { sdkLanguageDescriptions } from '@/lib/sdk-language-meta';
 
-const sdkLanguageIcons: Record<string, LucideIcon> = {
-  TypeScript: Braces,
-};
-
-const sdkLanguageGroups =
-  DOC_TABS.find((tab) => tab.id === 'sdks')?.groups.filter((group) => group.group !== 'Overview') ?? [];
-
-function sdkLanguageOverviewHref(group: DocNavGroup): string {
-  return group.pages.find((page) => page.title === 'Overview')?.href ?? group.pages[0]?.href ?? '/docs/sdks';
-}
+const sdkLanguages = [
+  { name: 'Python', href: '/docs/sdks/python', language: 'python' as const },
+  { name: 'TypeScript', href: '/docs/sdks/typescript', language: 'typescript' as const },
+];
 
 export function SdksIndexPage() {
   return (
@@ -37,25 +29,20 @@ export function SdksIndexPage() {
         </DocParagraph>
 
         <DocH2>Available SDKs</DocH2>
-        <DocParagraph>
-          TypeScript (<code>@phrony/sdk</code>) is the reference client for Node.js 18+. Additional language SDKs may
-          follow the same surface: a high-level <code>Phrony</code> facade with <code>PhronyAgent</code> and{' '}
-          <code>PhronyBundle</code> handles, a <code>RuntimeClient</code> for full RPC access, and a <code>Worker</code>{' '}
-          helper for tool bindings.
-        </DocParagraph>
       </DocProse>
 
       <div className="not-prose border-t border-border pt-8">
         <p className={docLabel}>Languages</p>
         <DocCardGroup className="mt-3">
-          {sdkLanguageGroups.map((group) => (
+          {sdkLanguages.map((sdk) => (
             <DocCard
-              key={group.group}
-              title={group.group}
-              href={sdkLanguageOverviewHref(group)}
-              icon={sdkLanguageIcons[group.group]}
+              key={sdk.name}
+              title={sdk.name}
+              href={sdk.href}
+              icon={<SdkLanguageLogo language={sdk.language} />}
+              iconBox={false}
             >
-              {sdkLanguageDescriptions[group.group] ?? `${group.group} SDK reference.`}
+              {sdkLanguageDescriptions[sdk.name] ?? `${sdk.name} SDK reference.`}
             </DocCard>
           ))}
         </DocCardGroup>

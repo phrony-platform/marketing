@@ -1,42 +1,51 @@
 import type { LucideIcon } from 'lucide-react';
 import Link from 'next/link';
-import type { ReactNode } from 'react';
+import { isValidElement, type ReactNode } from 'react';
 
 import { docCardLink, docIconBox } from '@/components/docs/doc-style';
 import { cn } from '@/lib/utils';
+
+export type DocCardIcon = LucideIcon | ReactNode;
+
+function renderDocCardIcon(icon: DocCardIcon) {
+  if (isValidElement(icon)) {
+    return icon;
+  }
+  const Icon = icon as LucideIcon;
+  return <Icon className="size-4" strokeWidth={1.5} />;
+}
 
 export function DocCard({
   title,
   href,
   children,
-  icon: Icon,
+  icon,
+  iconBox = true,
   className,
 }: {
   title: string;
   href: string;
   children: ReactNode;
-  icon?: LucideIcon;
+  icon?: DocCardIcon;
+  iconBox?: boolean;
   className?: string;
 }) {
   return (
-    <div className={cn(docCardLink, 'group h-full cursor-default', className)}>
-      {Icon ? (
-        <span className={docIconBox} aria-hidden>
-          <Icon className="size-4" strokeWidth={1.5} />
-        </span>
+    <Link href={href} className={cn(docCardLink, 'group h-full', className)}>
+      {icon ? (
+        iconBox ? (
+          <span className={docIconBox} aria-hidden>
+            {renderDocCardIcon(icon)}
+          </span>
+        ) : (
+          renderDocCardIcon(icon)
+        )
       ) : null}
-      <h3 className={cn('text-base font-medium', Icon && 'mt-4')}>
-        <Link
-          href={href}
-          className="text-foreground underline-offset-4 transition-colors hover:underline"
-        >
-          {title}
-        </Link>
-      </h3>
+      <h3 className={cn('text-base font-medium text-foreground', icon && 'mt-4')}>{title}</h3>
       <div className="mt-2 flex-1 text-pretty text-[13px] leading-relaxed text-muted-foreground [&_p]:m-0">
         {children}
       </div>
-    </div>
+    </Link>
   );
 }
 

@@ -11,14 +11,8 @@ import { QuickStartSetupRuntimePage } from '@/components/docs/pages/quick-start/
 import { QuickStartToolBindingPage } from '@/components/docs/pages/quick-start/tool-binding';
 import { QuickStartWriteManifestPage } from '@/components/docs/pages/quick-start/write-manifest';
 import { SdksIndexPage } from '@/components/docs/pages/sdks/sdks-index';
-import { TypeScriptSdkIndexPage } from '@/components/docs/pages/sdks/typescript/typescript-index';
-import { TypeScriptSdkConnectPage } from '@/components/docs/pages/sdks/typescript/typescript-connect';
-import { TypeScriptSdkInstallPage } from '@/components/docs/pages/sdks/typescript/typescript-install';
-import { TypeScriptSdkInteractiveSessionPage } from '@/components/docs/pages/sdks/typescript/typescript-interactive-session';
-import { TypeScriptSdkRunPage } from '@/components/docs/pages/sdks/typescript/typescript-run';
-import { TypeScriptSdkRuntimeClientPage } from '@/components/docs/pages/sdks/typescript/typescript-runtime-client';
-import { TypeScriptSdkUtilitiesPage } from '@/components/docs/pages/sdks/typescript/typescript-utilities';
-import { TypeScriptSdkWorkerPage } from '@/components/docs/pages/sdks/typescript/typescript-worker';
+import { PythonSdkPage } from '@/components/docs/pages/sdks/python/python-sdk-page';
+import { TypeScriptSdkPage } from '@/components/docs/pages/sdks/typescript/typescript-sdk-page';
 import { registerRuntimeMdxPages } from '@/lib/runtime-mdx';
 import { registerDocPage } from '@/lib/docs-registry';
 
@@ -124,64 +118,16 @@ registerDocPage({
 
 registerDocPage({
   slug: 'sdks/typescript',
-  title: 'Overview',
+  title: 'TypeScript SDK',
   description: 'The @phrony/sdk client for Node.js — install, run agents and bundles, stream sessions, and register workers.',
   tab: 'sdks',
-  component: TypeScriptSdkIndexPage,
+  component: TypeScriptSdkPage,
 });
 
 registerDocPage({
-  slug: 'sdks/typescript/install',
-  title: 'Install',
-  description: 'Add @phrony/sdk to your Node.js project.',
+  slug: 'sdks/python',
+  title: 'Python SDK',
+  description: 'The phrony client for Python — install, run agents and bundles, stream sessions, and register workers.',
   tab: 'sdks',
-  component: TypeScriptSdkInstallPage,
-});
-
-registerDocPage({
-  slug: 'sdks/typescript/connect',
-  title: 'Connect',
-  description: 'Dial a Phrony runtime with RuntimeClient, Phrony, or low-level helpers.',
-  tab: 'sdks',
-  component: TypeScriptSdkConnectPage,
-});
-
-registerDocPage({
-  slug: 'sdks/typescript/run',
-  title: 'Run agents & bundles',
-  description: 'Use Phrony, PhronyAgent, and PhronyBundle to start sessions and wait for completion.',
-  tab: 'sdks',
-  component: TypeScriptSdkRunPage,
-});
-
-registerDocPage({
-  slug: 'sdks/typescript/interactive-session',
-  title: 'Interactive sessions',
-  description: 'Stream RunSessionInteractive events, send user messages, and decide tool approvals.',
-  tab: 'sdks',
-  component: TypeScriptSdkInteractiveSessionPage,
-});
-
-registerDocPage({
-  slug: 'sdks/typescript/worker',
-  title: 'Tool workers',
-  description: 'Register tool handlers on the Work stream with Worker and WorkStream.',
-  tab: 'sdks',
-  component: TypeScriptSdkWorkerPage,
-});
-
-registerDocPage({
-  slug: 'sdks/typescript/runtime-client',
-  title: 'Runtime client',
-  description: 'RuntimeClient unary RPCs for agent and bundle lifecycle, sessions, approvals, and catalog.',
-  tab: 'sdks',
-  component: TypeScriptSdkRuntimeClientPage,
-});
-
-registerDocPage({
-  slug: 'sdks/typescript/utilities',
-  title: 'Utilities',
-  description: 'JSON bytes helpers, agent and bundle ref parsing, errors, constants, and proto types.',
-  tab: 'sdks',
-  component: TypeScriptSdkUtilitiesPage,
+  component: PythonSdkPage,
 });

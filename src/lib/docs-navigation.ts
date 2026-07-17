@@ -1,3 +1,4 @@
+import { PYTHON_SDK_NAV } from '@/lib/python-sdk-nav';
 import { TYPESCRIPT_SDK_NAV } from '@/lib/typescript-sdk-nav';
 
 /** Top-level documentation areas in the site docs shell. */
@@ -177,6 +178,10 @@ export const DOC_TABS: DocTab[] = [
       {
         group: 'Overview',
         pages: [{ title: 'Introduction', href: '/docs/sdks' }],
+      },
+      {
+        group: 'Python',
+        pages: [...PYTHON_SDK_NAV],
       },
       {
         group: 'TypeScript',
