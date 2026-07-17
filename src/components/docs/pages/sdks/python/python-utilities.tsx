@@ -51,18 +51,22 @@ export function PythonSdkUtilitiesSection() {
 
       <DocH2>Generated types</DocH2>
       <DocParagraph>
-        Import typed request shapes from <code>phrony</code> when building requests for{' '}
-        <code>RuntimeClient</code> unary methods. For advanced use you can still import protobuf
-        messages from <code>phrony.gen.phrony.runtime.v1</code>.
+        Import typed shapes from <code>phrony</code> for refs, interactive events, and common responses.
+        Unary methods with keyword-arg convenience include <code>run_session</code>,{' '}
+        <code>cancel_session</code>, <code>complete_session</code>, <code>inspect_session</code>,{' '}
+        <code>get_approval</code>, <code>decide_approval</code>, and <code>list_approvals</code>. For
+        publish, deploy, and catalog RPCs, pass protobuf request messages from{' '}
+        <code>phrony.gen.phrony.runtime.v1</code> — nested <code>agent_ref</code> and{' '}
+        <code>bundle_ref</code> fields accept dicts from <code>parse_agent_ref</code> /{' '}
+        <code>parse_bundle_ref</code>.
       </DocParagraph>
       <MethodExample name="Type imports" code={ex.generatedTypes} language="python" />
 
       <DocH3>Commonly used types</DocH3>
       <DocParagraph>
-        <code>AgentRef</code>, <code>BundleRef</code>, <code>Approval</code>, <code>ApprovalDecision</code>,{' '}
-        <code>PublishRequest</code>, <code>PublishBundleRequest</code>, <code>DeployRequest</code>,{' '}
-        <code>DeployBundleRequest</code>, <code>BundleSummary</code>, <code>BundleVersionSummary</code>,{' '}
-        <code>RunSessionRequest</code>, <code>WorkClientMsg</code>, <code>RunSessionInteractiveClientMsg</code>
+        <code>AgentRef</code>, <code>BundleRef</code>, <code>InteractiveEvent</code>,{' '}
+        <code>InteractiveSessionStartOptions</code>, <code>ApprovalDecision</code>,{' '}
+        <code>GetVersionResponse</code>, <code>RunSessionResponse</code>
       </DocParagraph>
     </DocProse>
   );

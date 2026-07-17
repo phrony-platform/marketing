@@ -61,7 +61,12 @@ export function PythonSdkInteractiveSessionSection() {
       />
 
       <DocH2>InteractiveEvent types</DocH2>
-      <DocParagraph>Server events are dicts with a <code>type</code> key:</DocParagraph>
+      <DocParagraph>
+        Server events are dicts with a <code>type</code> key. Lifecycle and tool events expose flat
+        fields — for example <code>session_started</code> includes <code>session_id</code>,{' '}
+        <code>agent_version_id</code>, and <code>history</code>; <code>approval_required</code> includes{' '}
+        <code>approval_id</code>, <code>tool</code>, and parsed <code>args</code>.
+      </DocParagraph>
       <DocH3>Lifecycle</DocH3>
       <DocParagraph>
         <code>session_started</code>, <code>completed</code>, <code>failed</code>, <code>cancelled</code>,{' '}

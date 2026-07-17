@@ -496,7 +496,7 @@ from phrony.gen.phrony.runtime.v1 import runtime_pb2
 
 await client.deploy(
     runtime_pb2.DeployRequest(
-        agent_ref=runtime_pb2.AgentRef(**parse_agent_ref("default/my-agent@0.2.0")),
+        agent_ref=parse_agent_ref("default/my-agent@0.2.0"),
         actor="ci@example.com",
     )
 )`;
@@ -526,9 +526,7 @@ from phrony.gen.phrony.runtime.v1 import runtime_pb2
 
 await client.deploy_bundle(
     runtime_pb2.DeployBundleRequest(
-        bundle_ref=runtime_pb2.BundleRef(
-            **parse_bundle_ref_version_required("demo/payment-desk@1.0.0"),
-        ),
+        bundle_ref=parse_bundle_ref_version_required("demo/payment-desk@1.0.0"),
         actor="ci@example.com",
     )
 )`;
@@ -538,7 +536,7 @@ from phrony.gen.phrony.runtime.v1 import runtime_pb2
 
 active = await client.get_active_bundle(
     runtime_pb2.GetActiveBundleRequest(
-        bundle_ref=runtime_pb2.BundleRef(**parse_bundle_ref("demo/payment-desk")),
+        bundle_ref=parse_bundle_ref("demo/payment-desk"),
     )
 )
 print(active.version, active.lock_hash)`;
@@ -552,7 +550,7 @@ from phrony.gen.phrony.runtime.v1 import runtime_pb2
 
 response = await client.list_bundle_versions(
     runtime_pb2.ListBundleVersionsRequest(
-        bundle_ref=runtime_pb2.BundleRef(**parse_bundle_ref("demo/payment-desk")),
+        bundle_ref=parse_bundle_ref("demo/payment-desk"),
     )
 )`;
 
@@ -561,7 +559,7 @@ from phrony.gen.phrony.runtime.v1 import runtime_pb2
 
 history = await client.list_bundle_deployments(
     runtime_pb2.ListBundleDeploymentsRequest(
-        bundle_ref=runtime_pb2.BundleRef(**parse_bundle_ref("demo/payment-desk")),
+        bundle_ref=parse_bundle_ref("demo/payment-desk"),
     )
 )
 for deployment in history.deployments:
@@ -572,7 +570,7 @@ from phrony.gen.phrony.runtime.v1 import runtime_pb2
 
 await client.rollback(
     runtime_pb2.RollbackRequest(
-        agent_ref=runtime_pb2.AgentRef(**parse_agent_ref("default/my-agent")),
+        agent_ref=parse_agent_ref("default/my-agent"),
         to_version="0.1.0",
         actor="ops@example.com",
     )
@@ -583,7 +581,7 @@ from phrony.gen.phrony.runtime.v1 import runtime_pb2
 
 active = await client.get_active_version(
     runtime_pb2.GetActiveVersionRequest(
-        agent_ref=runtime_pb2.AgentRef(**parse_agent_ref("default/my-agent")),
+        agent_ref=parse_agent_ref("default/my-agent"),
     )
 )
 print(active.version)`;
@@ -593,7 +591,7 @@ from phrony.gen.phrony.runtime.v1 import runtime_pb2
 
 history = await client.list_deployments(
     runtime_pb2.ListDeploymentsRequest(
-        agent_ref=runtime_pb2.AgentRef(**parse_agent_ref("default/my-agent")),
+        agent_ref=parse_agent_ref("default/my-agent"),
     )
 )
 for deployment in history.deployments:
@@ -604,7 +602,7 @@ from phrony.gen.phrony.runtime.v1 import runtime_pb2
 
 record = await client.get_agent_version(
     runtime_pb2.GetAgentVersionRequest(
-        agent_ref=runtime_pb2.AgentRef(**parse_agent_ref("default/my-agent@0.2.0")),
+        agent_ref=parse_agent_ref("default/my-agent@0.2.0"),
     )
 )`;
 
@@ -613,7 +611,7 @@ from phrony.gen.phrony.runtime.v1 import runtime_pb2
 
 await client.retire_agent_version(
     runtime_pb2.RetireAgentVersionRequest(
-        agent_ref=runtime_pb2.AgentRef(**parse_agent_ref("default/my-agent@0.1.0")),
+        agent_ref=parse_agent_ref("default/my-agent@0.1.0"),
     )
 )`;
 
@@ -622,7 +620,7 @@ from phrony.gen.phrony.runtime.v1 import runtime_pb2
 
 await client.deprecate_agent_version(
     runtime_pb2.DeprecateAgentVersionRequest(
-        agent_ref=runtime_pb2.AgentRef(**parse_agent_ref("default/my-agent@0.1.0")),
+        agent_ref=parse_agent_ref("default/my-agent@0.1.0"),
     )
 )`;
 
@@ -631,7 +629,7 @@ from phrony.gen.phrony.runtime.v1 import runtime_pb2
 
 await client.archive_agent(
     runtime_pb2.ArchiveAgentRequest(
-        agent_ref=runtime_pb2.AgentRef(**parse_agent_ref("default/my-agent")),
+        agent_ref=parse_agent_ref("default/my-agent"),
     )
 )`;
 
@@ -644,7 +642,7 @@ from phrony.gen.phrony.runtime.v1 import runtime_pb2
 
 response = await client.list_agent_versions(
     runtime_pb2.ListAgentVersionsRequest(
-        agent_ref=runtime_pb2.AgentRef(**parse_agent_ref("default/my-agent")),
+        agent_ref=parse_agent_ref("default/my-agent"),
     )
 )`;
 
@@ -653,7 +651,7 @@ from phrony.gen.phrony.runtime.v1 import runtime_pb2
 
 response = await client.list_sessions(
     runtime_pb2.ListSessionsRequest(
-        agent_ref=runtime_pb2.AgentRef(**parse_agent_ref("default/my-agent")),
+        agent_ref=parse_agent_ref("default/my-agent"),
         status="running",
         kind="",  # optional: "agent" or "bundle"
     )
@@ -669,14 +667,10 @@ export const completeSession = `await client.complete_session(session_id="sess_a
 
 export const getApproval = `approval = await client.get_approval(approval_id="appr_xyz")`;
 
-export const listApprovals = `from phrony.gen.phrony.runtime.v1 import runtime_pb2
-
-response = await client.list_approvals(
-    runtime_pb2.ListApprovalsRequest(
-        status="pending",
-        session_id="",
-        route="",
-    )
+export const listApprovals = `response = await client.list_approvals(
+    status="pending",
+    session_id="",
+    route="",
 )`;
 
 export const decideApproval = `from phrony import ApprovalDecision
@@ -793,7 +787,17 @@ print(SDK_VERSION)
 print(handler_key("weather.get-forecast", "1.0.0"))  # weather.get-forecast@1.0.0
 print(heartbeat_interval_ms(30_000))  # 15000`;
 
-export const generatedTypes = `from phrony import AgentRef, BundleRef
+export const generatedTypes = `from phrony import (
+    AgentRef,
+    ApprovalDecision,
+    BundleRef,
+    GetVersionResponse,
+    InteractiveEvent,
+    InteractiveSessionAttachOptions,
+    InteractiveSessionStartOptions,
+    InteractiveToolApprovalOptions,
+    RunSessionResponse,
+)
 
 agent_ref: AgentRef = {
     "namespace": "default",
@@ -801,11 +805,7 @@ agent_ref: AgentRef = {
     "version": "",
 }
 
-bundle_ref: BundleRef = {
-    "namespace": "demo",
-    "name": "payment-desk",
-    "version": "",
-}
-
 # Pass a string ref, dict, or keyword args to run_session / InteractiveSession.start.
-# For advanced use, import protobuf messages from phrony.gen.phrony.runtime.v1.`;
+# Convenience kwargs: run_session, cancel_session, complete_session, inspect_session,
+# get_approval, decide_approval, list_approvals.
+# For other unary RPCs, pass protobuf requests from phrony.gen.phrony.runtime.v1.`;

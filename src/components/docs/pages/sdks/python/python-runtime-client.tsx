@@ -110,7 +110,12 @@ export function PythonSdkRuntimeClientSection() {
 
       <DocH2>Approvals</DocH2>
       <MethodExample name="await get_approval(approval_id=...)" code={ex.getApproval} language="python" />
-      <MethodExample name="await list_approvals(request?)" code={ex.listApprovals} language="python" />
+      <MethodExample
+        name="await list_approvals(...)"
+        description="Filter by status, session_id, route, agent_namespace, and agent_name. Omit filters to list all."
+        code={ex.listApprovals}
+        language="python"
+      />
       <MethodExample name="await decide_approval(...)" code={ex.decideApproval} language="python" />
 
       <DocH2>Streams</DocH2>

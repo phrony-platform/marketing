@@ -15,12 +15,13 @@ export function PythonSdkPage() {
       eyebrow="SDKs · Python"
     >
       <DocProse>
-        <DocParagraph>
-          <code>phrony</code> is the Python client for the Phrony runtime. It targets Python 3.10+, uses{' '}
-          <code>grpc.aio</code> for async transport, and maps proto <code>bytes</code> JSON fields through helpers so
-          you work with ordinary Python objects. All public APIs are <code>async</code> — run them with{' '}
-          <code>asyncio</code>.
-        </DocParagraph>
+      <DocParagraph>
+        <code>phrony</code> is the Python client for the Phrony runtime. It targets Python 3.10+, uses{' '}
+        <code>grpc.aio</code> for async transport, and maps proto <code>bytes</code> JSON fields through helpers so
+        you work with ordinary Python objects — strings and dicts for agent refs, keyword arguments on common RPCs,
+        and flattened interactive events. All public APIs are <code>async</code> — run them with{' '}
+        <code>asyncio</code>.
+      </DocParagraph>
       </DocProse>
 
       <PythonSdkInstallSection />
