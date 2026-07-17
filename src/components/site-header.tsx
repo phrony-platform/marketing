@@ -6,6 +6,7 @@ import { BookOpen, Github, Menu, Newspaper, X, type LucideIcon } from 'lucide-re
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { PhronyLogo } from '@/components/phrony-logo';
+import { DocsSearchMobileLink, DocsSearchTrigger } from '@/components/docs/docs-search';
 import { documentationHref } from '@/lib/docs-url';
 import { PHRONY_GITHUB_ORG_URL } from '@/lib/project-urls';
 
@@ -129,8 +130,8 @@ export function SiteHeader() {
 
   return (
     <header className="sticky top-0 z-50 isolate border-b border-border bg-background text-foreground">
-      <div className="relative z-60 mx-auto flex h-16 w-full max-w-[1488px] items-center justify-between gap-4 bg-background px-5 md:px-8">
-        <div className="flex min-w-0 flex-1 items-center gap-3">
+      <div className="mx-auto flex h-16 w-full max-w-[1488px] items-center gap-4 bg-background px-5 md:gap-6 md:px-8">
+        <div className="flex shrink-0 items-center gap-3">
           <Link href="/" className="flex shrink-0 items-center">
             <PhronyLogo priority className="h-6 w-auto" />
           </Link>
@@ -149,50 +150,60 @@ export function SiteHeader() {
           ) : null}
         </div>
 
-        <div className="hidden shrink-0 items-center gap-3 md:flex">
-          <a
-            href={PHRONY_GITHUB_ORG_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex size-9 items-center justify-center rounded-md border border-border bg-transparent text-foreground transition-colors hover:bg-muted"
-            aria-label="GitHub"
-          >
-            <Github className="size-5" strokeWidth={1.75} aria-hidden />
-          </a>
-          {!inDocs ? (
-            <Link
-              href={documentationHref}
-              className={`${headerButtonBase} gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90 sm:gap-2`}
-            >
-              <BookOpen className="size-4 shrink-0" strokeWidth={1.75} aria-hidden />
-              Documentation
-            </Link>
-          ) : null}
-          {!inBlog ? (
-            <Link
-              href="/blog"
-              className={`${headerButtonBase} border border-border bg-transparent text-foreground hover:bg-muted`}
-            >
-              Blog
-            </Link>
-          ) : null}
-        </div>
+        {inDocs ? (
+          <div className="mx-auto hidden w-full max-w-xl flex-1 md:block">
+            <DocsSearchTrigger className="w-full" />
+          </div>
+        ) : (
+          <div className="min-w-0 flex-1" />
+        )}
 
-        <button
-          type="button"
-          data-mobile-nav-trigger
-          className="inline-flex size-9 items-center justify-center rounded-md border border-border bg-background text-muted-foreground transition-colors hover:bg-muted hover:text-foreground md:hidden"
-          aria-expanded={mobileOpen}
-          aria-controls="mobile-primary-nav"
-          aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
-          onClick={() => setMobileOpen((o) => !o)}
-        >
-          {mobileOpen ? (
-            <X className="size-5" strokeWidth={1.75} aria-hidden />
-          ) : (
-            <Menu className="size-5" strokeWidth={1.75} aria-hidden />
-          )}
-        </button>
+        <div className="flex shrink-0 items-center justify-end gap-3">
+          <div className="hidden items-center gap-3 md:flex">
+            <a
+              href={PHRONY_GITHUB_ORG_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex size-9 items-center justify-center rounded-md border border-border bg-transparent text-foreground transition-colors hover:bg-muted"
+              aria-label="GitHub"
+            >
+              <Github className="size-5" strokeWidth={1.75} aria-hidden />
+            </a>
+            {!inDocs ? (
+              <Link
+                href={documentationHref}
+                className={`${headerButtonBase} gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90 sm:gap-2`}
+              >
+                <BookOpen className="size-4 shrink-0" strokeWidth={1.75} aria-hidden />
+                Documentation
+              </Link>
+            ) : null}
+            {!inBlog ? (
+              <Link
+                href="/blog"
+                className={`${headerButtonBase} border border-border bg-transparent text-foreground hover:bg-muted`}
+              >
+                Blog
+              </Link>
+            ) : null}
+          </div>
+
+          <button
+            type="button"
+            data-mobile-nav-trigger
+            className="inline-flex size-9 items-center justify-center rounded-md border border-border bg-background text-muted-foreground transition-colors hover:bg-muted hover:text-foreground md:hidden"
+            aria-expanded={mobileOpen}
+            aria-controls="mobile-primary-nav"
+            aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
+            onClick={() => setMobileOpen((o) => !o)}
+          >
+            {mobileOpen ? (
+              <X className="size-5" strokeWidth={1.75} aria-hidden />
+            ) : (
+              <Menu className="size-5" strokeWidth={1.75} aria-hidden />
+            )}
+          </button>
+        </div>
       </div>
 
       {mobileOpen ? (
@@ -212,6 +223,11 @@ export function SiteHeader() {
               aria-label="Primary"
             >
               <ul className="flex flex-col gap-1">
+                {inDocs ? (
+                  <li>
+                    <DocsSearchMobileLink onNavigate={closeMobile} />
+                  </li>
+                ) : null}
                 <li>
                   <MobileNavItem
                     href={documentationHref}
