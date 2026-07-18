@@ -94,9 +94,9 @@ export function DocCallout({ variant = 'note', title, children, className }: Pro
           <p className={cn(docLabel, meta.heading)}>{heading}</p>
           <div
             className={cn(
-              'mt-2 text-[13px] leading-relaxed',
+              'mt-2 min-w-0 wrap-anywhere text-[13px] leading-relaxed',
               meta.body,
-              '[&_a]:cursor-pointer [&_a]:font-medium [&_a]:underline [&_a]:underline-offset-4',
+              '[&_a]:cursor-pointer [&_a]:break-all [&_a]:font-medium [&_a]:underline [&_a]:underline-offset-4',
               '[&_a]:decoration-current/40 [&_a:hover]:decoration-current',
               '[&_code]:rounded-sm [&_code]:bg-black/5 [&_code]:px-1 [&_code]:py-0 [&_code]:font-mono [&_code]:text-[0.85em] dark:[&_code]:bg-white/10',
               '[&_p+p]:mt-2',
