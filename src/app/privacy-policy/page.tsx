@@ -7,6 +7,9 @@ export const metadata: Metadata = {
   title: 'Privacy Policy',
   description:
     'Phrony Privacy Policy: self-hosted runtime data practices, GDPR rights, cookies, retention, and contact.',
+  alternates: {
+    canonical: '/privacy-policy',
+  },
 };
 
 export default function PrivacyPolicyPage() {

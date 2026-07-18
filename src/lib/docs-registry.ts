@@ -27,3 +27,7 @@ export function getDocPage(slugSegments: string[]): DocPageEntry | undefined {
   return registry.get(slugSegments.join('/'));
 }
 
+export function getAllDocPages(): DocPageEntry[] {
+  return Array.from(registry.values()).sort((a, b) => a.slug.localeCompare(b.slug));
+}
+

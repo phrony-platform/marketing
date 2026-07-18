@@ -1,10 +1,14 @@
 import type { MetadataRoute } from 'next';
 
+import '@/lib/docs-pages';
+
 import { getAllBlogPosts } from '@/lib/blog';
+import { getAllDocPages } from '@/lib/docs-registry';
 import { PHRONY_DOCS_ORIGIN } from '@/lib/project-urls';
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const posts = getAllBlogPosts();
+  const docs = getAllDocPages();
 
   const staticRoutes: MetadataRoute.Sitemap = [
     {
@@ -24,6 +28,16 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: 'weekly',
       priority: 0.9,
     },
+    {
+      url: `${PHRONY_DOCS_ORIGIN}/privacy-policy`,
+      changeFrequency: 'yearly',
+      priority: 0.3,
+    },
+    {
+      url: `${PHRONY_DOCS_ORIGIN}/terms-of-service`,
+      changeFrequency: 'yearly',
+      priority: 0.3,
+    },
   ];
 
   const postRoutes: MetadataRoute.Sitemap = posts.map((post) => ({
@@ -33,5 +47,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.7,
   }));
 
-  return [...staticRoutes, ...postRoutes];
+  const docRoutes: MetadataRoute.Sitemap = docs.map((page) => ({
+    url: `${PHRONY_DOCS_ORIGIN}/docs/${page.slug}`,
+    changeFrequency: 'weekly' as const,
+    priority: 0.8,
+  }));
+
+  return [...staticRoutes, ...postRoutes, ...docRoutes];
 }

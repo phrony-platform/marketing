@@ -6,17 +6,27 @@ import { getAllBlogPosts } from '@/lib/blog';
 
 export const dynamic = 'force-static';
 
+const description = 'News, updates, and engineering notes from the Phrony team.';
+
 export const metadata: Metadata = {
   title: 'Blog',
-  description: 'News, updates, and engineering notes from the Phrony team.',
+  description,
   alternates: {
     canonical: '/blog',
+    types: {
+      'application/rss+xml': '/blog/feed.xml',
+    },
   },
   openGraph: {
     title: 'Blog · Phrony',
-    description: 'News, updates, and engineering notes from the Phrony team.',
+    description,
     type: 'website',
     url: '/blog',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Blog · Phrony',
+    description,
   },
 };
 

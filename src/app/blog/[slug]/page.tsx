@@ -26,6 +26,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 
   const url = `/blog/${post.slug}`;
+  const imageUrl = `/blog/${post.slug}/opengraph-image`;
 
   return {
     title: post.title,
@@ -41,11 +42,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       publishedTime: post.date,
       authors: post.author ? [post.author] : undefined,
       tags: post.tags,
+      images: [{ url: imageUrl }],
     },
     twitter: {
       card: 'summary_large_image',
       title: post.title,
       description: post.description,
+      images: [imageUrl],
     },
   };
 }
@@ -60,10 +63,11 @@ export default async function BlogPostPage({ params }: PageProps) {
 
   const { content } = await compileBlogMdx(slug);
   const url = `${PHRONY_DOCS_ORIGIN}/blog/${post.slug}`;
+  const imageUrl = `${PHRONY_DOCS_ORIGIN}/blog/${post.slug}/opengraph-image`;
 
   return (
     <>
-      <BlogPostJsonLd post={post} url={url} />
+      <BlogPostJsonLd post={post} url={url} imageUrl={imageUrl} />
       <BlogArticleLayout post={post}>{content}</BlogArticleLayout>
       <BlogArticleFooter />
     </>

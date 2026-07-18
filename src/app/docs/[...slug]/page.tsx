@@ -3,11 +3,21 @@ import Link from 'next/link';
 
 import '@/lib/docs-pages';
 
-import { getDocPage } from '@/lib/docs-registry';
+import { DocPageJsonLd } from '@/components/docs/doc-page-json-ld';
+import { getAllDocPages, getDocPage } from '@/lib/docs-registry';
+import { PHRONY_DOCS_ORIGIN } from '@/lib/project-urls';
 
 type PageProps = {
   params: Promise<{ slug: string[] }>;
 };
+
+export const dynamic = 'force-static';
+
+export function generateStaticParams() {
+  return getAllDocPages().map((page) => ({
+    slug: page.slug.split('/'),
+  }));
+}
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
@@ -15,9 +25,29 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   if (!page) {
     return { title: 'Not found' };
   }
+
+  const url = `/docs/${page.slug}`;
+  const imageUrl = `/docs/${page.slug}/opengraph-image`;
+
   return {
     title: page.title,
     description: page.description,
+    alternates: {
+      canonical: url,
+    },
+    openGraph: {
+      title: page.title,
+      description: page.description,
+      type: 'article',
+      url,
+      images: [{ url: imageUrl }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: page.title,
+      description: page.description,
+      images: [imageUrl],
+    },
   };
 }
 
@@ -41,5 +71,12 @@ export default async function DocSlugPage({ params }: PageProps) {
   }
 
   const Content = page.component;
-  return <Content />;
+  const url = `${PHRONY_DOCS_ORIGIN}/docs/${page.slug}`;
+
+  return (
+    <>
+      <DocPageJsonLd title={page.title} description={page.description} url={url} />
+      <Content />
+    </>
+  );
 }
