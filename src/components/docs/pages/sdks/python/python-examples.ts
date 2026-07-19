@@ -658,8 +658,8 @@ response = await client.list_sessions(
 )`;
 
 export const inspectSession = `response = await client.inspect_session(session_id="sess_abc123")
-# response.session.timeline — unified chronological audit view
-# response.session.children — delegated child sessions (same shape, recursive)`;
+# response.timeline — unified chronological narrative for the session and descendants
+# response.session.children — delegated child session headers (story lives in timeline)`;
 
 export const cancelSession = `await client.cancel_session(session_id="sess_abc123")`;
 

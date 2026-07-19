@@ -408,11 +408,11 @@ export const listSessions = `const { sessions } = await client.listSessions({
   kind: "", // optional: "agent" or "bundle"
 });`;
 
-export const inspectSession = `const { session } = await client.inspectSession({
+export const inspectSession = `const { session, timeline } = await client.inspectSession({
   sessionId: "sess_abc123",
 });
-// session.timeline — unified chronological audit view
-// session.children — delegated child sessions (same shape, recursive)`;
+// timeline — unified chronological narrative for the session and descendants
+// session.children — delegated child session headers (story lives in timeline)`;
 
 export const cancelSession = `await client.cancelSession({ sessionId: "sess_abc123" });`;
 

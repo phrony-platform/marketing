@@ -66,7 +66,7 @@ Sessions in **`awaiting_approval`** are waiting on an operator decision. Use [`p
 
 ## `sessions inspect`
 
-Dump the full persisted state for one session: input, output, conversation history, token usage, ordered audit timeline, tool invocations (with queue and execution delays), approvals, agent context, and delegated child sessions.
+Dump a readable session header (identity, agent, input/output, error) plus one chronological **timeline** for the session and its delegated descendants. Child sessions appear as short headers only; their events are already in the shared timeline.
 
 ```bash
 phrony sessions inspect SESSION_ID [flags]
@@ -85,7 +85,7 @@ phrony sessions inspect run_abc123
 phrony sessions inspect run_abc123 --json
 ```
 
-Human output includes a unified **timeline** (session events, invocation milestones, and approvals sorted chronologically with inter-step gaps), per-turn usage from history, and nested **child** sessions when the run delegated to sub-agents.
+Human output prints the root session header, then a single **timeline** (events, invocation milestones, and approvals sorted chronologically with inter-step gaps). With `--json`, payloads and tool args/results are nested JSON objects on `timeline` entries.
 
 ---
 
