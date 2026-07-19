@@ -27,7 +27,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 
   const url = `/docs/${page.slug}`;
-  const imageUrl = `/docs/${page.slug}/opengraph-image`;
+  const imageUrl = `/docs/og/${page.slug}`;
 
   return {
     title: page.title,

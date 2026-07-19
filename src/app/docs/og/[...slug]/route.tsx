@@ -1,17 +1,13 @@
 import '@/lib/docs-pages';
 
 import { getDocPage } from '@/lib/docs-registry';
-import { createOgImage, OG_CONTENT_TYPE, OG_SIZE } from '@/lib/og-image';
+import { createOgImage } from '@/lib/og-image';
 
-export const alt = 'Phrony documentation';
-export const size = OG_SIZE;
-export const contentType = OG_CONTENT_TYPE;
-
-type ImageProps = {
+type RouteProps = {
   params: Promise<{ slug: string[] }>;
 };
 
-export default async function Image({ params }: ImageProps) {
+export async function GET(_request: Request, { params }: RouteProps) {
   const { slug } = await params;
   const page = getDocPage(slug);
 
